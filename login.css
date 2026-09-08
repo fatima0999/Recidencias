@@ -1,0 +1,59 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    min-height: 100%;   /* Cambiado de height a min-height */
+    margin: 0;
+    padding: 0;
+}
+
+/* El fondo va en el body para que cubra TODA la página */
+body {
+    background-image: url(Imagenes/A218775_blog.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.gradient-custom {
+    /* La sección solo organiza el contenido, el fondo ya está en el body */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-transparente {
+    background: rgba(20, 20, 20, 0.25) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 1rem !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.30);
+    
+}
+
+.login-transparente .form-control {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.60);
+}
+
+.login-transparente .card-body {
+    padding: 1.5rem !important;
+}
+
+.login-transparente h2 {
+    margin-bottom: 0.5rem !important;
+    font-size: 1.5rem;
+}
+
+.login-transparente .form-control-lg {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+}
+

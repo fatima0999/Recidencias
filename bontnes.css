@@ -1,0 +1,25 @@
+.botonp{
+    background-color: aqua;
+    color:floralwhite;
+    text-decoration: none;
+    padding: auto;
+    display: inline-block;
+}
+.logo-sipv{
+    font-size:40px;
+    font-weight:700;
+    color:#d90429; /* rojo Audi */
+    letter-spacing:2px;
+}
+
+.titulo-audi{
+    font-size:18px;
+    font-weight:600;
+    color:#212529;
+    letter-spacing:1px;
+}
+#modelsChart{
+    max-width: 450px;
+    max-height: 450px;
+    margin: auto;
+}

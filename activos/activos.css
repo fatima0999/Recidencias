@@ -1,0 +1,136 @@
+/* ==================== RESET Y BASE ==================== */
+body {
+    width: 100%;
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    padding-top: 80px; /* Espacio para el navbar fixed */
+}
+
+/* ==================== BOTONES DE FILTRO ==================== */
+.d-flex.gap-3 .btn {
+    transition: all 0.25s ease !important;
+}
+
+.d-flex.gap-3 .btn:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.35) !important;
+}
+
+/* ==================== ANIMATED ICONS ==================== */
+animated-icons {
+    display: block;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+/* ==================== CARDS - EFECTO PRINCIPAL ==================== */
+.card {
+    border-radius: 16px !important;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    cursor: pointer !important;
+    background-color: #ffffff !important;
+    position: relative !important;
+    overflow: visible !important; /* Importante para que se vea la sombra */
+}
+
+/* ===== EFECTO AL PASAR EL MOUSE ===== */
+.card:hover {
+    transform: translateY(-14px) scale(1.05) !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.18) !important;
+    z-index: 20 !important;
+}
+
+/* ===== EFECTO AL HACER CLIC ===== */
+.card:active {
+    transform: translateY(-6px) scale(1.02) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14) !important;
+}
+
+/* ===== BRILLO QUE PASA POR LA TARJETA ===== */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -80%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.45) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-25deg);
+    transition: left 0.65s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.card:hover::before {
+    left: 130%;
+}
+
+/* ===== ICONOS CRECEN AL HACER HOVER ===== */
+.card .rounded-circle {
+    transition: transform 0.35s ease !important;
+}
+
+.card:hover .rounded-circle {
+    transform: scale(1.15) !important;
+}
+
+/* ===== BOTÓN "VER MÁS" ===== */
+.card .btn {
+    transition: all 0.25s ease !important;
+    position: relative;
+    z-index: 2;
+}
+
+.card:hover .btn {
+    transform: scale(1.08) !important;
+}
+
+/* ==================== TÍTULOS ==================== */
+.card-title {
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+}
+
+.card-text {
+    font-size: 0.8rem !important;
+}
+
+/* ==================== NAVBAR ==================== */
+.navbar {
+    z-index: 1030 !important;
+}
+
+.titulo-audi {
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #333;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+    .card {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 11rem;
+    }
+
+    .card:hover {
+        transform: translateY(-10px) scale(1.03) !important;
+    }
+}
+.bn30 {
+    background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+}

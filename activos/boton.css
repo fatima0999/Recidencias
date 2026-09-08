@@ -1,0 +1,270 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(to right, #3a6073, #16222a);
+    font-family: "Raleway", sans-serif;
+}
+
+
+/* =========================
+   FONDO OSCURO
+========================= */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1;
+}
+
+
+/* =========================
+   POPUP
+========================= */
+
+.popup {
+    position: fixed;
+
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+
+    width: 420px;
+    max-width: 90%;
+
+    max-height: 90vh;
+
+    background: #ffffff;
+
+    border-radius: 12px;
+
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+
+    overflow-y: auto;
+
+    z-index: 2;
+}
+
+
+/* =========================
+   BOTÓN CERRAR
+========================= */
+
+.popup .close-btn {
+    position: absolute;
+
+    top: 12px;
+    right: 12px;
+
+    width: 32px;
+    height: 32px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #eeeeee;
+
+    color: #555;
+
+    font-size: 24px;
+
+    line-height: 32px;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.popup .close-btn:hover {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+
+/* =========================
+   FORMULARIO
+========================= */
+
+.form {
+    padding: 30px;
+}
+
+.form h2 {
+    text-align: center;
+
+    margin-bottom: 25px;
+
+    color: #333333;
+
+    font-size: 24px;
+}
+
+
+/* =========================
+   ELEMENTOS DEL FORMULARIO
+========================= */
+
+.form-element {
+    margin-bottom: 16px;
+}
+
+.form-element label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #444444;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+
+/* =========================
+   INPUTS Y SELECTS
+   TODOS DEL MISMO TAMAÑO
+========================= */
+
+.form-element input,
+.form-element .styled-select {
+    width: 100%;
+
+    height: 42px;
+
+    padding: 10px 12px;
+
+    border: 1px solid #cccccc;
+
+    border-radius: 6px;
+
+    background: #ffffff;
+
+    color: #333333;
+
+    font-size: 14px;
+
+    font-family: inherit;
+
+    outline: none;
+
+    box-sizing: border-box;
+
+    transition: 0.2s;
+}
+
+
+/* =========================
+   SELECT
+========================= */
+
+.form-element .styled-select {
+    cursor: pointer;
+}
+
+
+/* =========================
+   EFECTO AL SELECCIONAR
+========================= */
+
+.form-element input:focus,
+.form-element .styled-select:focus {
+    border-color: #3a6073;
+
+    box-shadow: 0 0 0 2px rgba(58, 96, 115, 0.15);
+}
+
+
+/* =========================
+   BOTONES
+========================= */
+
+.buttons {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 12px;
+
+    margin-top: 25px;
+}
+
+.btn {
+    height: 42px;
+
+    padding: 0 25px;
+
+    border: none;
+
+    border-radius: 6px;
+
+    font-size: 14px;
+
+    font-family: inherit;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+
+/* =========================
+   BOTÓN GUARDAR
+========================= */
+
+.guardar {
+    background: #3a6073;
+
+    color: #ffffff;
+}
+
+.guardar:hover {
+    background: #2d4d5d;
+}
+
+
+/* =========================
+   BOTÓN CANCELAR
+========================= */
+
+.cancelar {
+    background: #e5e5e5;
+
+    color: #333333;
+}
+
+.cancelar:hover {
+    background: #d2d2d2;
+}
+
+
+/* =========================
+   PANTALLAS PEQUEÑAS
+========================= */
+
+@media (max-width: 500px) {
+
+    .popup {
+        width: 95%;
+    }
+
+    .form {
+        padding: 25px 20px;
+    }
+
+    .form h2 {
+        font-size: 21px;
+    }
+
+    .buttons {
+        justify-content: center;
+    }
+
+}
