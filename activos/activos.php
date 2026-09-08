@@ -56,7 +56,7 @@
             </button>
             <ul class="dropdown-menu">
                 <li>
-                    <a class="dropdown-item" href="./agregaciones/extintore.php">
+                    <a class="dropdown-item" href="./agregaciones/extintore1.php">
                         <i class="fa-solid fa-fire-extinguisher"></i>
                         Agregar extintor
                     </a>

@@ -1,0 +1,99 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(to right, #040c17, #010202);
+    font-family: "Raleway", sans-serif;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+.popup {
+    position: relative;
+    width: 380px;
+    padding: 20px 30px;
+    background: #bd8181;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.popup #close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: #fff;
+    font-size: 22px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.popup .form h2 {
+    text-align: center;
+    color: #04090f;
+    margin: 5px 0 15px;
+    font-size: 22px;
+}
+
+.popup .form .form-element {
+    margin-bottom: 12px;
+}
+
+.popup .form .form-element label {
+    font-size: 13px;
+    color: #04090f;
+    font-weight: 600;
+}
+
+.popup .form .form-element input[type="text"], 
+.popup .form .form-element input[type="date"],
+.popup .form .form-element select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #03080e;
+    border-radius: 5px;
+    display: block;
+    margin-top: 4px;
+    background: #fff;
+    outline: none;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.popup .form .form-element button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #3a7bd5;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.popup .form .back-link {
+    text-align: center;
+    margin-top: 12px;
+}
+
+.popup .form .back-link a {
+    color: #04090f;
+    text-decoration: underline;
+    font-size: 13px;
+}
