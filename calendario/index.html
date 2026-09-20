@@ -30,7 +30,7 @@
         <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
         <div class="container-fluid">
             <div class="border-start ps-3">
-                <h6 class="mb-0 titulo-audi">SÓTANO</h6>
+                <h6 class="mb-0 titulo-audi">Calendario</h6>
             </div>
 
             <div class="ms-auto d-flex align-items-center gap-2">
@@ -68,7 +68,12 @@
     </div>
 
     <script>
+        // ===== NUEVO: pedir permiso de notificaciones del navegador al cargar =====
         $(document).ready(function(){
+            if(Notification.permission !== 'granted' && Notification.permission !== 'denied'){
+                Notification.requestPermission();
+            }
+
             $('#CalendarioWeb').fullCalendar({
                 header:{
                     left: 'today,prev,next',
@@ -102,9 +107,52 @@
                     $('#txtHora').val(FechaHora[1] ? FechaHora[1].substring(0,5) : '10:30');
                     
                     $("#exampleModal").modal();
+                },
+                // ===== NUEVO: se dispara cada vez que el calendario termina de pintar eventos =====
+                eventAfterAllRender: function(view){
+                    revisarVencimientos();
                 }
             });
         });
+
+        // ===== NUEVO: revisa eventos próximos a vencer y avisa =====
+        function revisarVencimientos(){
+            var hoy = moment().startOf('day');
+            var eventos = $('#CalendarioWeb').fullCalendar('clientEvents');
+            var avisados = JSON.parse(localStorage.getItem('avisados') || '[]');
+            var porVencer = [];
+
+            eventos.forEach(function(evento){
+                var dias = evento.start.startOf('day').diff(hoy, 'days');
+                if(dias >= 0 && dias <= 15){
+                    porVencer.push(evento);
+
+                    // Notificación del navegador, solo una vez por evento
+                    if(avisados.indexOf(evento.id) === -1){
+                        if(Notification.permission === 'granted'){
+                            new Notification('Equipo por vencer', {
+                                body: evento.title + ' — vence en ' + dias + ' días'
+                            });
+                        }
+                        avisados.push(evento.id);
+                    }
+                }
+            });
+
+            localStorage.setItem('avisados', JSON.stringify(avisados));
+
+            // Aviso visual arriba del calendario
+            $('#avisoVencimientos').remove();
+            if(porVencer.length > 0){
+                var html = '<div id="avisoVencimientos" class="alert alert-warning">';
+                html += '<strong>' + porVencer.length + ' equipo(s) por vencer:</strong><ul class="mb-0">';
+                porVencer.forEach(function(e){
+                    html += '<li>' + e.title + '</li>';
+                });
+                html += '</ul></div>';
+                $('#CalendarioWeb').before(html);
+            }
+        }
 
         // ===== DELEGACIÓN DE EVENTOS (funciona aunque el modal esté después) =====
         var NuevoEvento;

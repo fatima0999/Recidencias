@@ -97,3 +97,7 @@ body {
     text-decoration: underline;
     font-size: 13px;
 }
+.scroll-popup {
+    max-height: 90vh;
+    overflow-y: auto;
+}
