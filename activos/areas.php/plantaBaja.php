@@ -107,7 +107,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Extintores</h5>
                         <p class="card-text small text-muted mb-1">Gestión de extintores</p>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/extintoresplantabaja.php" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -128,7 +128,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Botiquines</h5>
                         <p class="card-text small text-muted mb-1">Gestión de botiquines</p>
-                        <a href="#" class="btn btn-sm btn-outline-success rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/botiquines.php" class="btn btn-sm btn-outline-success rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -146,7 +146,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Luces de emergencia</h5>
                         <p class="card-text small text-muted mb-1">Gestión de luces</p>
-                        <a href="#" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/lucesdeemergencia.php" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -167,7 +167,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Sensores de Humo</h5>
                         <p class="card-text small text-muted mb-1">Gestión de sensores</p>
-                        <a href="#" class="btn btn-sm btn-outline-secondary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/sensoresdehumo.php" class="btn btn-sm btn-outline-secondary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -188,7 +188,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Punto de reunión</h5>
                         <p class="card-text small text-muted mb-1">Gestión de puntos</p>
-                        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/puntode reunion.php" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -241,7 +241,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Hidrantes</h5>
                         <p class="card-text small text-muted mb-1">Gestión de hidrantes</p>
-                        <a href="#" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/hidratantes.php" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -262,7 +262,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Documentos</h5>
                         <p class="card-text small text-muted mb-1">Gestión de documentos</p>
-                        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/documentos.php" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>

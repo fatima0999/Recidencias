@@ -89,9 +89,7 @@ $resultadoProveedores = pg_query($bd, $sqlProveedores);
     <div class="overlay">
 
         <div class="popup scroll-popup">
-
-            <a href="../activos.php" id="close-btn">&times;</a>
-
+                <a href="/recidencias/activos/areas.php/seguimientoSotano.php/extintores.php" id="close-btn">&times;</a>
             <div class="form">
 
                 <h2>Agregar extintor</h2>

@@ -232,13 +232,13 @@ if ($resultadoTablaActivos) {
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="alertas/alertas.php">
                         <i class="fas fa-exclamation-triangle me-2"></i>Alertas
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="mantenimientos/todosactivos.php">
                         <i class="fas fa-tools me-2"></i>Mantenimientos
                     </a>
                 </li>
@@ -385,101 +385,7 @@ if ($resultadoTablaActivos) {
 
         </div>
 
-        <!-- TABLA DE TODOS LOS ACTIVOS -->
-        <div class="row g-4 mt-1">
-            <div class="col-12">
-                <div class="card shadow-sm">
-
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Todos los Activos</h5>
-                    </div>
-
-                    <div class="card-body">
-
-                        <!-- BUSCADOR Y FILTRO -->
-                        <div class="row g-2 mb-3">
-
-                            <div class="col-md-6">
-                                <input
-                                    type="text"
-                                    id="buscadorActivos"
-                                    class="form-control"
-                                    placeholder="Buscar por folio, tipo o área...">
-                            </div>
-
-                            <div class="col-md-4">
-                                <select id="filtroEstado" class="form-select">
-                                    <option value="">Todos los estados</option>
-                                    <option value="Al corriente">Al corriente</option>
-                                    <option value="Por vencer">Por vencer</option>
-                                    <option value="Vencido">Vencido</option>
-                                </select>
-                            </div>
-
-                        </div>
-
-                        <!-- TABLA -->
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle" id="tablaActivos">
-                                <thead>
-                                    <tr>
-                                        <th>Folio</th>
-                                        <th>Tipo</th>
-                                        <th>Área</th>
-                                        <th>Fecha crítica</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-
-                                    <?php foreach ($listaActivos as $activo): ?>
-
-                                        <?php
-                                        // Clase de color según el estado, para el pill
-                                        $claseEstado = 'bg-secondary';
-
-                                        if ($activo['estado'] === 'Al corriente') {
-                                            $claseEstado = 'bg-success';
-                                        } elseif ($activo['estado'] === 'Por vencer') {
-                                            $claseEstado = 'bg-warning text-dark';
-                                        } elseif ($activo['estado'] === 'Vencido') {
-                                            $claseEstado = 'bg-danger';
-                                        }
-                                        ?>
-
-                                        <tr data-estado="<?= htmlspecialchars($activo['estado']) ?>">
-                                            <td><?= htmlspecialchars($activo['identificador']) ?></td>
-                                            <td><?= htmlspecialchars($activo['tipo_activo']) ?></td>
-                                            <td><?= htmlspecialchars($activo['area']) ?></td>
-                                            <td><?= htmlspecialchars($activo['fecha_critica']) ?></td>
-                                            <td>
-                                                <span class="badge <?= $claseEstado ?>">
-                                                    <?= htmlspecialchars($activo['estado']) ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-
-                                    <?php endforeach; ?>
-
-                                    <?php if (empty($listaActivos)): ?>
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">
-                                                No hay activos registrados.
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-
-                                </tbody>
-                            </table>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
-
     <!-- ========== JAVASCRIPT ========== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

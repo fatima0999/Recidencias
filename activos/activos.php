@@ -106,7 +106,7 @@
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="./agre.hidrantes/hidrantes.php">
+                    <a class="dropdown-item" href="./agre.hidratantes/hidratantes.php">
                         <i class="fa-solid fa-faucet-drip me-2"></i>
                         Agregar hidrante
                     </a>
@@ -192,7 +192,7 @@
                         </div>
                         <h5 class="card-title mt-1 mb-1" style="font-size: 0.95rem;">Extintores</h5>
                         <p class="card-text small text-muted mb-1" style="font-size: 0.75rem;">Gestión de extintores</p>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
+                        <a href="../activos/TODASLAS AREASACTI/EXTINTORES.PHP" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>

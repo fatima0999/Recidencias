@@ -1,5 +1,17 @@
 <?php
-// Aquí puedes poner tu lógica PHP si la necesitas
+// ==================== LÓGICA PHP ====================
+// TODO: Reemplazar estos valores fijos por la consulta real a PostgreSQL
+// Ejemplo:
+// $result = pg_query($conn, "SELECT COUNT(*) FROM extintores WHERE sucursal='sotano'");
+// $total_activos = pg_fetch_result($result, 0, 0);
+
+$total_activos = $total_activos ?? 0;
+$al_corriente  = $al_corriente ?? 0;
+$por_vencer    = $por_vencer ?? 0;
+$vencidos      = $vencidos ?? 0;
+
+// Ruta del PDF a descargar (ajusta cuando tengas el generador de reportes)
+$archivo_pdf = $archivo_pdf ?? '#';
 ?>
 <!doctype html>
 <html lang="es">
@@ -8,15 +20,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" 
-          rel="stylesheet" 
-          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
           crossorigin="anonymous">
 
     <link rel="stylesheet" href="activos.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
 
     <title>ACTIVOS</title>
+
+    <style>
+        /* Empuja el contenido para que el navbar fijo no lo tape */
+        body {
+            padding-top: 70px;
+        }
+        .card:hover {
+            transform: translateY(-14px) scale(1.05) !important;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2) !important;
+            transition: all 0.35s ease !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -28,7 +52,7 @@
             </div>
 
             <div class="ms-auto d-flex align-items-center gap-2">
-                <a href="ARCHIVO" download="Reporte" class="btn btn-outline-secondary">
+                <a href="<?= htmlspecialchars($archivo_pdf) ?>" download="Reporte" class="btn btn-outline-secondary">
                     📄 PDF
                 </a>
 
@@ -47,7 +71,7 @@
         </div>
     </nav>
 
-    <!-- ==================== OFFCANVAS ==================== -->
+    <!-- ==================== OFFCANVAS (menú de niveles) ==================== -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDerecho" aria-labelledby="offcanvasDerechoLabel">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title" id="offcanvasDerechoLabel">Menú</h5>
@@ -90,9 +114,58 @@
     </div>
 
     <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
-    <div class="container mt-5 pt-3">
+    <div class="container mt-3">
 
-        <!-- ==================== CARDS ==================== -->
+        <!-- ==================== MÉTRICAS ==================== -->
+        <div class="row g-3 mb-4">
+            <!-- AL CORRIENTE -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card card-metric p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-shape bg-success me-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Al corriente</small>
+                            <h4 class="fw-bold m-0"><?= $al_corriente ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POR VENCER -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card card-metric p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-shape bg-warning me-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Por vencer</small>
+                            <h4 class="fw-bold m-0"><?= $por_vencer ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VENCIDOS -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card card-metric p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-shape bg-danger me-3">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Vencidos</small>
+                            <h4 class="fw-bold m-0"><?= $vencidos ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /.row métricas -->
+
+        <!-- ==================== TARJETAS DE CATEGORÍAS ==================== -->
         <div class="row g-3">
 
             <!-- Extintores -->
@@ -107,7 +180,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Extintores</h5>
                         <p class="card-text small text-muted mb-1">Gestión de extintores</p>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/extintores.php" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -128,7 +201,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Botiquines</h5>
                         <p class="card-text small text-muted mb-1">Gestión de botiquines</p>
-                        <a href="#" class="btn btn-sm btn-outline-success rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/botiquines.php" class="btn btn-sm btn-outline-success rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -146,7 +219,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Luces de emergencia</h5>
                         <p class="card-text small text-muted mb-1">Gestión de luces</p>
-                        <a href="#" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/lucesDeEmergencia.php" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -167,7 +240,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Sensores de Humo</h5>
                         <p class="card-text small text-muted mb-1">Gestión de sensores</p>
-                        <a href="#" class="btn btn-sm btn-outline-secondary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/DectectoresdeHumo.php" class="btn btn-sm btn-outline-secondary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -188,7 +261,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Punto de reunión</h5>
                         <p class="card-text small text-muted mb-1">Gestión de puntos</p>
-                        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/puntos.php" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -209,7 +282,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Señalizaciones</h5>
                         <p class="card-text small text-muted mb-1">Gestión de señalizaciones</p>
-                        <a href="#" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/senalizaciones.php" class="btn btn-sm btn-outline-warning rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -226,7 +299,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Alarmas</h5>
                         <p class="card-text small text-muted mb-1">Gestión de alarmas</p>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/alarmas.php" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -241,7 +314,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Hidrantes</h5>
                         <p class="card-text small text-muted mb-1">Gestión de hidrantes</p>
-                        <a href="#" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/Hidrantantes.php" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
@@ -262,12 +335,12 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Documentos</h5>
                         <p class="card-text small text-muted mb-1">Gestión de documentos</p>
-                        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/documentos.php" class="btn btn-sm btn-outline-primary rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>
 
-        </div><!-- /.row -->
+        </div><!-- /.row tarjetas -->
     </div><!-- /.container -->
 
     <!-- ==================== SCRIPTS ==================== -->
@@ -276,13 +349,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
             crossorigin="anonymous"></script>
-
-    <style>
-        .card:hover {
-            transform: translateY(-14px) scale(1.05) !important;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2) !important;
-            transition: all 0.35s ease !important;
-        }
-    </style>
 </body>
 </html>
