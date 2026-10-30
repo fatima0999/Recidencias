@@ -11,6 +11,31 @@ $conexion = $conexionClase->conectar();
 
 
 /* ==========================================================
+   MENSAJES (después de eliminar)
+   ========================================================== */
+
+$mensaje = null;
+$tipoMensaje = 'success';
+
+if (isset($_GET['eliminado'])) {
+
+    $mensaje = 'Extintor eliminado correctamente.';
+
+} elseif (isset($_GET['error'])) {
+
+    $tipoMensaje = 'danger';
+
+    $mensajesError = [
+        '1' => 'El identificador del extintor no es válido.',
+        '2' => 'No se encontró el extintor o no pertenece al Sótano.',
+        '3' => 'No se pudo eliminar el extintor porque tiene información relacionada en el sistema.',
+    ];
+
+    $mensaje = $mensajesError[$_GET['error']] ?? 'Ocurrió un error al eliminar el extintor.';
+}
+
+
+/* ==========================================================
    CONSULTA DE EXTINTORES DEL SÓTANO — CONTEOS
    ========================================================== */
 
@@ -129,12 +154,17 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
     } else {
 
-        $fechaFormateada = date('d M Y', strtotime($fechaCritica));
+        $fechaFormateada = date(
+            'd M Y',
+            strtotime($fechaCritica)
+        );
 
         if ($fechaCritica < $hoy) {
             $estado = 'Vencido';
+
         } elseif ($fechaCritica <= $en30Dias) {
             $estado = 'Por vencer';
+
         } else {
             $estado = 'Al corriente';
         }
@@ -150,7 +180,6 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
@@ -162,9 +191,7 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>
-        Extintores - Sótano
-    </title>
+    <title>Extintores - Sótano</title>
 
 
     <!-- BOOTSTRAP 5 CSS -->
@@ -180,9 +207,7 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
     >
 
     <!-- LIBRERÍA PARA GENERAR QR -->
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 
     <!-- ESTILOS -->
@@ -210,9 +235,7 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
         }
 
-
         /* CONTENEDOR DEL QR */
-
         #contenedorQR {
             display: flex;
             justify-content: center;
@@ -240,8 +263,8 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
     <!-- =====================================================
-        NAVBAR
-        ===================================================== -->
+         NAVBAR
+         ===================================================== -->
 
     <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
 
@@ -255,8 +278,8 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
             </div>
 
-
             <div class="ms-auto d-flex align-items-center gap-2">
+
                 <a
                     href="../../areas.php/sotano.php"
                     class="btn btn-outline-danger"
@@ -274,8 +297,35 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
     <!-- =====================================================
-        CONTENEDOR DE MÉTRICAS
-        ===================================================== -->
+         MENSAJE (eliminado / error)
+         ===================================================== -->
+
+    <?php if ($mensaje !== null): ?>
+
+        <div class="container-fluid contenedor-metricas">
+
+            <div class="alert alert-<?= $tipoMensaje ?> alert-dismissible fade show" role="alert">
+
+                <?= htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8') ?>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"
+                ></button>
+
+            </div>
+
+        </div>
+
+    <?php endif; ?>
+
+
+
+    <!-- =====================================================
+         CONTENEDOR DE MÉTRICAS
+         ===================================================== -->
 
     <div class="container-fluid contenedor-metricas">
 
@@ -284,40 +334,55 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
             <!-- CUMPLIMIENTO -->
             <div class="col-lg-3 col-md-6">
                 <div class="card p-3 border-start border-success border-4 shadow-sm">
+
                     <small class="text-muted">Cumplimiento</small>
+
                     <h3 class="fw-bold text-success m-0">
                         <?= $cumplimiento ?>%
                     </h3>
+
                 </div>
             </div>
+
 
             <!-- AL CORRIENTE -->
             <div class="col-lg-3 col-md-6">
                 <div class="card p-3 border-start border-success border-4 shadow-sm">
+
                     <small class="text-muted">Al corriente</small>
+
                     <h3 class="fw-bold m-0">
                         <?= $al_corriente ?>
                     </h3>
+
                 </div>
             </div>
+
 
             <!-- POR VENCER -->
             <div class="col-lg-3 col-md-6">
                 <div class="card p-3 border-start border-warning border-4 shadow-sm">
+
                     <small class="text-muted">Por vencer</small>
+
                     <h3 class="fw-bold text-warning m-0">
                         <?= $por_vencer ?>
                     </h3>
+
                 </div>
             </div>
+
 
             <!-- VENCIDOS -->
             <div class="col-lg-3 col-md-6">
                 <div class="card p-3 border-start border-danger border-4 shadow-sm">
+
                     <small class="text-muted">Vencidos</small>
+
                     <h3 class="fw-bold text-danger m-0">
                         <?= $vencidos ?>
                     </h3>
+
                 </div>
             </div>
 
@@ -328,15 +393,15 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
     <!-- =====================================================
-        ENCABEZADO ACTIVOS + BOTÓN AGREGAR
-        ===================================================== -->
+         ENCABEZADO ACTIVOS + BOTÓN AGREGAR
+         ===================================================== -->
 
     <div class="container d-flex justify-content-between align-items-center mt-1 pt-3">
 
         <h5>ACTIVOS</h5>
 
         <a
-            href="../../agre.extintores/extintore1.php"
+            href="agregar/extintores.php"
             class="btn btn-primary"
         >
             <i class="fas fa-plus me-1"></i>
@@ -348,8 +413,8 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
     <!-- =====================================================
-        TABLA DE EXTINTORES
-        ===================================================== -->
+         TABLA DE EXTINTORES
+         ===================================================== -->
 
     <div class="container-fluid">
 
@@ -360,41 +425,54 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
                 <div class="card shadow-sm">
 
                     <div class="card-header bg-white">
+
                         <h5 class="mb-0">
                             <i class="fas fa-list me-2 text-primary"></i>
                             Extintores del Sótano
                         </h5>
+
                     </div>
 
 
                     <div class="card-body">
 
+
                         <!-- BUSCADOR Y FILTRO -->
+
                         <div class="row g-2 mb-3">
 
                             <div class="col-md-6">
+
                                 <input
                                     type="text"
                                     id="buscadorExtintores"
                                     class="form-control"
                                     placeholder="Buscar por folio..."
                                 >
+
                             </div>
 
                             <div class="col-md-4">
-                                <select id="filtroEstado" class="form-select">
+
+                                <select
+                                    id="filtroEstado"
+                                    class="form-select"
+                                >
                                     <option value="">Todos los estados</option>
                                     <option value="Al corriente">Al corriente</option>
                                     <option value="Por vencer">Por vencer</option>
                                     <option value="Vencido">Vencido</option>
                                     <option value="Sin fecha">Sin fecha</option>
                                 </select>
+
                             </div>
 
                         </div>
 
 
+
                         <!-- TABLA -->
+
                         <div class="table-responsive">
 
                             <table
@@ -421,43 +499,54 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
                                         $claseEstado = 'bg-secondary';
 
                                         if ($extintor['estado'] === 'Al corriente') {
+
                                             $claseEstado = 'bg-success';
+
                                         } elseif ($extintor['estado'] === 'Por vencer') {
+
                                             $claseEstado = 'bg-warning text-dark';
+
                                         } elseif ($extintor['estado'] === 'Vencido') {
+
                                             $claseEstado = 'bg-danger';
+
                                         }
 
                                         ?>
 
-                                        <tr
-                                            data-estado="<?= htmlspecialchars($extintor['estado']) ?>"
-                                        >
+
+                                        <tr data-estado="<?= htmlspecialchars($extintor['estado'], ENT_QUOTES, 'UTF-8') ?>">
 
                                             <!-- FOLIO -->
                                             <td>
-                                                <?= htmlspecialchars($extintor['identificador']) ?>
+                                                <?= htmlspecialchars($extintor['identificador'], ENT_QUOTES, 'UTF-8') ?>
                                             </td>
+
 
                                             <!-- FECHA -->
                                             <td>
-                                                <?= htmlspecialchars($extintor['fecha_formateada'] ?? '—') ?>
+                                                <?= htmlspecialchars($extintor['fecha_formateada'] ?? '—', ENT_QUOTES, 'UTF-8') ?>
                                             </td>
+
 
                                             <!-- ESTADO -->
                                             <td>
+
                                                 <span class="badge <?= $claseEstado ?>">
-                                                    <?= htmlspecialchars($extintor['estado']) ?>
+                                                    <?= htmlspecialchars($extintor['estado'], ENT_QUOTES, 'UTF-8') ?>
                                                 </span>
+
                                             </td>
 
-                                            <!-- ACCIONES (VER + QR) -->
+
+                                            <!-- ACCIONES -->
                                             <td>
 
                                                 <div class="d-flex gap-1">
 
+                                                    <!-- BOTÓN VER -->
                                                     <a
-                                                        href="../../areas.php/seguimientoSotano.php/ver_extinguidores.php?id=<?= (int) $extintor['id_extintor'] ?>"
+                                                        href="ver_extinguidores.php?id=<?= (int) $extintor['id_extintor'] ?>"
                                                         class="btn btn-outline-primary btn-sm"
                                                         title="Ver extintor"
                                                     >
@@ -465,19 +554,33 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
                                                         Ver
                                                     </a>
 
+
+                                                    <!-- BOTÓN QR -->
                                                     <button
                                                         type="button"
                                                         class="btn btn-outline-dark btn-sm"
                                                         onclick="mostrarQR(
                                                             <?= (int) $extintor['id_extintor'] ?>,
-                                                            '<?= htmlspecialchars(
-                                                                $extintor['identificador'],
-                                                                ENT_QUOTES
-                                                            ) ?>'
+                                                            <?= htmlspecialchars(json_encode($extintor['identificador']), ENT_QUOTES, 'UTF-8') ?>
                                                         )"
                                                     >
                                                         <i class="fas fa-qrcode me-1"></i>
                                                         QR
+                                                    </button>
+
+
+                                                    <!-- BOTÓN ELIMINAR -->
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        title="Eliminar extintor"
+                                                        onclick="confirmarEliminar(
+                                                            <?= (int) $extintor['id_extintor'] ?>,
+                                                            <?= htmlspecialchars(json_encode($extintor['identificador']), ENT_QUOTES, 'UTF-8') ?>
+                                                        )"
+                                                    >
+                                                        <i class="fas fa-trash me-1"></i>
+                                                        Eliminar
                                                     </button>
 
                                                 </div>
@@ -519,8 +622,8 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
     <!-- =====================================================
-        MODAL DEL QR
-        ===================================================== -->
+         MODAL DEL QR
+         ===================================================== -->
 
     <div
         class="modal fade"
@@ -565,6 +668,7 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
                 <div class="modal-footer">
+
                     <button
                         type="button"
                         class="btn btn-secondary"
@@ -572,6 +676,7 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
                     >
                         Cerrar
                     </button>
+
                 </div>
 
             </div>
@@ -582,16 +687,92 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
 
+    <!-- =====================================================
+         MODAL DE CONFIRMACIÓN PARA ELIMINAR
+         ===================================================== -->
+
+    <div
+        class="modal fade"
+        id="modalEliminar"
+        tabindex="-1"
+        aria-hidden="true"
+    >
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <form action="eliminar_extintor.php" method="POST">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Eliminar extintor
+                        </h5>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"
+                        ></button>
+
+                    </div>
+
+
+                    <div class="modal-body">
+
+                        <input type="hidden" name="id_extintor" id="idEliminar">
+
+                        <p class="mb-1">
+                            ¿Seguro que quieres eliminar el extintor con folio
+                            <strong id="folioEliminar"></strong>?
+                        </p>
+
+                        <small class="text-muted">
+                            Esta acción no se puede deshacer.
+                        </small>
+
+                    </div>
+
+
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>
+                            Sí, eliminar
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
     <!-- BOOTSTRAP JS -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js">
-    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 
 
 
     <!-- =====================================================
-        BUSCADOR, FILTRO Y QR
-        ===================================================== -->
+         BUSCADOR, FILTRO, QR Y ELIMINAR
+         ===================================================== -->
 
     <script>
 
@@ -633,29 +814,32 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
         filtroEstado.addEventListener('change', filtrarTabla);
 
 
-        /* GENERAR QR DEL EXTINTOR */
+        /* =====================================================
+           GENERAR QR DEL EXTINTOR
+           ===================================================== */
+
         function mostrarQR(idExtintor, folio) {
 
-            const contenedorQR = document.getElementById("contenedorQR");
+            const contenedorQR = document.getElementById('contenedorQR');
 
             /* LIMPIAR QR ANTERIOR */
-            contenedorQR.innerHTML = "";
+            contenedorQR.innerHTML = '';
 
             /* MOSTRAR FOLIO */
-            document.getElementById("folioQR").textContent =
-                "Extintor: " + folio;
+            document.getElementById('folioQR').textContent =
+                'Extintor: ' + folio;
 
             /* IP DE LA COMPUTADORA CON XAMPP */
-            const ipServidor = "192.168.1.68";
+            const ipServidor = '192.168.1.68';
 
-            /* URL REAL DE LA FICHA DEL EXTINTOR (ver_extinguidores.php) */
+            /* URL DE LA FICHA DEL EXTINTOR */
             const urlExtintor =
-                "http://" +
+                'http://' +
                 ipServidor +
-                "/recidencias/activos/areas.php/seguimientoSotano.php/ver_extinguidores.php?id=" +
+                '/recidencias/activos/seguimientoSotano.php/ver_extinguidores.php?id=' +
                 idExtintor;
 
-            console.log("URL DEL QR:", urlExtintor);
+            console.log('URL DEL QR:', urlExtintor);
 
             /* GENERAR QR */
             new QRCode(contenedorQR, {
@@ -666,7 +850,25 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
             /* ABRIR MODAL */
             const modal = new bootstrap.Modal(
-                document.getElementById("modalQR")
+                document.getElementById('modalQR')
+            );
+
+            modal.show();
+
+        }
+
+
+        /* =====================================================
+           CONFIRMAR ELIMINACIÓN
+           ===================================================== */
+
+        function confirmarEliminar(idExtintor, folio) {
+
+            document.getElementById('idEliminar').value = idExtintor;
+            document.getElementById('folioEliminar').textContent = folio;
+
+            const modal = new bootstrap.Modal(
+                document.getElementById('modalEliminar')
             );
 
             modal.show();
@@ -677,5 +879,4 @@ while ($fila = pg_fetch_assoc($resultadoExtintores)) {
 
 
 </body>
-
 </html>

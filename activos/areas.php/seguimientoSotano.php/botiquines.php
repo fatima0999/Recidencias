@@ -75,7 +75,16 @@ function fechaValida($fecha)
 
     $d = DateTime::createFromFormat('!Y-m-d', $fecha);
 
-    return $d && $d->format('Y-m-d') === $fecha;
+    // Verificar que la fecha sea válida y esté escrita como YYYY-MM-DD.
+    if (!$d || $d->format('Y-m-d') !== $fecha) {
+        return false;
+    }
+
+    // Permitir fechas únicamente desde 2026 hasta el 31/12/2030.
+    $fechaMinima = new DateTime('2026-01-01');
+    $fechaMaxima = new DateTime('2030-12-31');
+
+    return $d >= $fechaMinima && $d <= $fechaMaxima;
 }
 
 function redirigirDetalle($idBotiquin, $mensaje)
@@ -637,28 +646,6 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
                 <p class="text-muted mb-0">Información del botiquín del Sótano</p>
             </div>
 
-            <div class="d-flex gap-2">
-                <?php if ($puedeEditar): ?>
-                    <form method="post"
-                          onsubmit="return confirmarRevision(<?php echo count($medCaducados); ?>);">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($csrf); ?>">
-                        <input type="hidden" name="accion" value="aceptar_revision">
-                        <input type="hidden" name="id_botiquin"
-                               value="<?php echo (int) $botiquinDetalle['id_botiquin']; ?>">
-
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check2-circle"></i>
-                            Aceptar revisión
-                        </button>
-                    </form>
-                <?php endif; ?>
-
-                <a href="<?php echo htmlspecialchars($rutaActual); ?>"
-                   class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i>
-                    Regresar
-                </a>
-            </div>
         </div>
 
         <?php if ($diasRevision !== null && $diasRevision < 0): ?>
@@ -708,7 +695,7 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
 
         <div class="row g-4">
 
-            <div class="col-lg-8">
+            <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-header bg-white">
                         <i class="bi bi-info-circle"></i>
@@ -757,37 +744,11 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
                                 <strong>Próxima revisión:</strong>
                                 <div><?php echo formatoFecha($botiquinDetalle['fecha_proxima_revision']); ?></div>
                             </div>
-
-                            <div class="col-12">
-                                <strong>Observaciones:</strong>
-                                <div class="mt-2 p-3 bg-light rounded">
-                                    <?php
-                                    echo !empty($botiquinDetalle['observaciones'])
-                                        ? nl2br(htmlspecialchars($botiquinDetalle['observaciones']))
-                                        : 'Sin observaciones registradas.';
-                                    ?>
-                                </div>
-                            </div>
-
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <i class="bi bi-qr-code"></i>
-                        Identificador QR
-                    </div>
-
-                    <div class="card-body text-center">
-                        <div id="qrDetalle" class="qr-container"></div>
-                        <h5 class="mt-3"><?php echo htmlspecialchars($codigoBotiquin); ?></h5>
-                        <small class="text-muted">Código de identificación del botiquín</small>
-                    </div>
-                </div>
-            </div>
 
         </div>
 
@@ -936,40 +897,35 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
         </div>
 
 
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-white">
-                <i class="bi bi-clipboard-check"></i>
-                Estados de medicamentos
-            </div>
+        
 
-            <div class="card-body">
-                <div class="row g-3">
+        <!-- ======================================================
+             BOTONES AL FINAL DE LOS DETALLES DEL BOTIQUÍN
+             ====================================================== -->
+        <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap mt-4 mb-4">
 
-                    <div class="col-md-4">
-                        <div class="p-3 rounded medicamento-vigente">
-                            <strong>Vigente</strong><br>
-                            <small>El medicamento está registrado como vigente.</small>
-                        </div>
-                    </div>
+            <?php if ($puedeEditar): ?>
+                <form method="post"
+                      class="m-0"
+                      onsubmit="return confirmarRevision(<?php echo count($medCaducados); ?>);">
 
-                    <div class="col-md-4">
-                        <div class="p-3 rounded medicamento-proximo">
-                            <strong>Próximo a caducar</strong><br>
-                            <small>Requiere seguimiento por su fecha de caducidad.</small>
-                        </div>
-                    </div>
+                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($csrf); ?>">
+                    <input type="hidden" name="accion" value="aceptar_revision">
+                    <input type="hidden" name="id_botiquin" value="<?php echo (int) $botiquinDetalle['id_botiquin']; ?>">
 
-                    <div class="col-md-4">
-                        <div class="p-3 rounded medicamento-caducado">
-                            <strong>Caducado</strong><br>
-                            <small>El medicamento se encuentra registrado como caducado.</small>
-                        </div>
-                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check2-circle"></i>
+                        Aceptar revisión
+                    </button>
+                </form>
+            <?php endif; ?>
 
-                </div>
-            </div>
+            <a href="<?php echo htmlspecialchars($rutaActual); ?>" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Regresar
+            </a>
+
         </div>
-
 
         <?php if ($puedeEditar): ?>
 
@@ -1025,7 +981,11 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
                             <div class="col-6">
                                 <label class="form-label" for="medCaducidad">Fecha de caducidad</label>
                                 <input type="date" class="form-control"
-                                       name="fecha_caducidad" id="medCaducidad" required>
+                                       name="fecha_caducidad" id="medCaducidad"
+                                       min="2026-01-01" max="2030-12-31" required>
+                                <small class="form-text text-muted">
+                                    Selecciona una fecha entre 2026 y 2030.
+                                </small>
                             </div>
 
                             <div class="col-6">
@@ -1187,7 +1147,7 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
 
         <!-- Ajusta la ruta a tu archivo para agregar botiquines -->
         <a
-            href="../../agre.botiquines/botiquines.php"
+            href="../../areas.php/seguimientoSotano.php/botiquines/botiquines.php"
             class="btn btn-primary"
         >
             <i class="bi bi-plus-lg me-1"></i>
@@ -1252,7 +1212,7 @@ $rutaActual = strtok($_SERVER['REQUEST_URI'], '?');
                                     <th>Próx. revisión</th>
                                     <th>Estado</th>
                                     <th>Medicamentos</th>
-                                    <th>Acciones</th>
+                                    <th class="text-center">Visualización</th>
                                 </tr>
                             </thead>
 
@@ -1649,24 +1609,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filtroEstado')
         ?.addEventListener('change', filtrarBotiquines);
 
-    // Si existe qrDetalle, estamos viendo el detalle del botiquín.
-    const contenedorDetalle = document.getElementById('qrDetalle');
-
-    if (contenedorDetalle) {
-
-        if (typeof QRCode === 'undefined') {
-            contenedorDetalle.textContent =
-                'No se pudo cargar la librería QR.';
-            return;
-        }
-
-        const parametros = new URLSearchParams(window.location.search);
-        const numero = parseInt(parametros.get('botiquin'), 10);
-
-        if (Number.isInteger(numero) && numero > 0) {
-            crearQR(contenedorDetalle, generarUrlBotiquin(numero));
-        }
-    }
 });
 </script>
 

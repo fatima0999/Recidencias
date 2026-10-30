@@ -4,132 +4,215 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Calendario Web (Develoteca.com)</title>
-    
+    <title>Calendario - SIPV</title>
+
+    <!-- ========== ESTILOS ========== -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
-    <script src="js/jquery.min.js"></script>
-    <script src="js/moment.min.js"></script>
-    
-    <!-- Full Calendar -->
     <link rel="stylesheet" href="css/fullcalendar.min.css">
-    <script src="js/fullcalendar.min.js"></script>
-    <script src="js/es.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-    
+
     <style>
+        /* Espacio para que el navbar fijo no tape el contenido */
+        body {
+            padding-top: 70px;
+        }
+
         .fc th {
             padding: 10px 0px;
             vertical-align: middle;
             background: #f2f2f2;
         }
     </style>
+
+    <!-- ========== LIBRERÍAS ========== -->
+    <script src="js/jquery.min.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/fullcalendar.min.js"></script>
+    <script src="js/es.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
+
 <body>
-        <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
+
+    <!-- ========== NAVBAR ========== -->
+    <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
         <div class="container-fluid">
-            <div class="border-start ps-3">
+
+            <div class="pl-3 border-left">
                 <h6 class="mb-0 titulo-audi">Calendario</h6>
             </div>
 
-            <div class="ms-auto d-flex align-items-center gap-2">
-                <a href="ARCHIVO" download="Reporte" class="btn btn-outline-secondary">
+            <div class="ml-auto d-flex align-items-center">
+                <!-- PDF: calendario + activos por vencer + vencidos -->
+                <button type="button" id="btnPdf" class="btn btn-outline-secondary mr-2">
                     📄 PDF
-                </a>
-
-                <button class="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasDerecho"
-                        aria-controls="offcanvasDerecho">
-                    <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <a href="../pruebafina.php" class="btn btn-outline-danger">
                     Volver
                 </a>
             </div>
+
         </div>
     </nav>
-    <p>
 
-    </p>
-    <p>
-
-    </p>
+    <!-- ========== CALENDARIO ========== -->
     <div class="container">
-        <br><br>
+        <br>
         <div class="row">
             <div class="col"></div>
-            <div class="col-7"><div id="CalendarioWeb"></div></div>
+            <div class="col-7">
+                <div id="CalendarioWeb"></div>
+            </div>
             <div class="col"></div>
         </div>
     </div>
 
+    <!-- ========== MODAL DE EVENTO ========== -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Evento</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="txtID" name="txtID">
+                    <input type="hidden" id="txtFecha" name="txtFecha">
+
+                    <div class="form-row">
+
+                        <div class="form-group col-md-12">
+                            <label>Título:</label>
+                            <input type="text" id="txtTitulo" class="form-control" placeholder="Título del evento">
+                        </div>
+
+                        <div class="form-group col-md-4">
+                            <label>Hora del evento:</label>
+                            <div class="input-group clockpicker" data-autoclose="true">
+                                <input type="text" id="txtHora" value="10:30" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group col-md-12">
+                            <label>Descripción:</label>
+                            <textarea id="txtDescripcion" rows="3" class="form-control"></textarea>
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <label>Color de fondo:</label>
+                            <input type="color" value="#ff0000" id="txtColor" class="form-control" style="height:36px;">
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <label>Color del texto:</label>
+                            <input type="color" value="#FFFFFF" id="txtTextColor" class="form-control" style="height:36px;">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="btnAgregar" class="btn btn-success">Agregar</button>
+                    <button type="button" id="btnModificar" class="btn btn-success">Modificar</button>
+                    <button type="button" id="btnEliminar" class="btn btn-danger">Borrar</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== JAVASCRIPT ========== -->
     <script>
-        // ===== NUEVO: pedir permiso de notificaciones del navegador al cargar =====
-        $(document).ready(function(){
-            if(Notification.permission !== 'granted' && Notification.permission !== 'denied'){
+
+        // Días de anticipación para considerar un activo "por vencer"
+        var DIAS_AVISO = 15;
+
+
+        // ==================================================
+        // 1. INICIALIZACIÓN
+        // ==================================================
+        $(document).ready(function () {
+
+            // Pedir permiso de notificaciones del navegador
+            if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                 Notification.requestPermission();
             }
 
             $('#CalendarioWeb').fullCalendar({
-                header:{
+
+                header: {
                     left: 'today,prev,next',
                     center: 'title',
                     right: 'month,basicWeek,agendaWeek,agendaDay'
                 },
-                dayClick: function(date, jsEvent, view){
+
+                events: 'eventos.php',
+
+                // Clic en un día vacío: nuevo evento
+                dayClick: function (date, jsEvent, view) {
                     $('#btnAgregar').prop('disabled', false);
                     $('#btnModificar').prop('disabled', true);
                     $('#btnEliminar').prop('disabled', true);
-                    
+
                     limpiarFormulario();
                     $('#txtFecha').val(date.format());
-                    $("#exampleModal").modal();
+                    $('#exampleModal').modal();
                 },
-                events: 'eventos.php',
-                eventClick: function(calEvent, jsEvent, view){
+
+                // Clic en un evento: editar / borrar
+                eventClick: function (calEvent, jsEvent, view) {
                     $('#btnAgregar').prop('disabled', true);
                     $('#btnModificar').prop('disabled', false);
                     $('#btnEliminar').prop('disabled', false);
-                    
+
                     // Recuperar datos del evento seleccionado
                     $('#txtID').val(calEvent.id);
                     $('#txtTitulo').val(calEvent.title);
                     $('#txtColor').val(calEvent.color);
                     $('#txtDescripcion').val(calEvent.descripcion);
                     $('#txtTextColor').val(calEvent.textColor || '#FFFFFF');
-                    
-                    FechaHora = calEvent.start.format().split("T");
+
+                    var FechaHora = calEvent.start.format().split('T');
                     $('#txtFecha').val(FechaHora[0]);
-                    $('#txtHora').val(FechaHora[1] ? FechaHora[1].substring(0,5) : '10:30');
-                    
-                    $("#exampleModal").modal();
+                    $('#txtHora').val(FechaHora[1] ? FechaHora[1].substring(0, 5) : '10:30');
+
+                    $('#exampleModal').modal();
                 },
-                // ===== NUEVO: se dispara cada vez que el calendario termina de pintar eventos =====
-                eventAfterAllRender: function(view){
+
+                // Se dispara cada vez que el calendario termina de pintar eventos
+                eventAfterAllRender: function (view) {
                     revisarVencimientos();
                 }
             });
         });
 
-        // ===== NUEVO: revisa eventos próximos a vencer y avisa =====
-        function revisarVencimientos(){
+
+        // ==================================================
+        // 2. AVISO DE EVENTOS POR VENCER (pantalla)
+        // ==================================================
+        function revisarVencimientos() {
             var hoy = moment().startOf('day');
             var eventos = $('#CalendarioWeb').fullCalendar('clientEvents');
             var avisados = JSON.parse(localStorage.getItem('avisados') || '[]');
             var porVencer = [];
 
-            eventos.forEach(function(evento){
-                var dias = evento.start.startOf('day').diff(hoy, 'days');
-                if(dias >= 0 && dias <= 15){
+            eventos.forEach(function (evento) {
+                // clone() para no modificar la fecha original del evento
+                var dias = evento.start.clone().startOf('day').diff(hoy, 'days');
+
+                if (dias >= 0 && dias <= DIAS_AVISO) {
                     porVencer.push(evento);
 
                     // Notificación del navegador, solo una vez por evento
-                    if(avisados.indexOf(evento.id) === -1){
-                        if(Notification.permission === 'granted'){
+                    if (avisados.indexOf(evento.id) === -1) {
+                        if (Notification.permission === 'granted') {
                             new Notification('Equipo por vencer', {
                                 body: evento.title + ' — vence en ' + dias + ' días'
                             });
@@ -143,80 +226,100 @@
 
             // Aviso visual arriba del calendario
             $('#avisoVencimientos').remove();
-            if(porVencer.length > 0){
+
+            if (porVencer.length > 0) {
                 var html = '<div id="avisoVencimientos" class="alert alert-warning">';
                 html += '<strong>' + porVencer.length + ' equipo(s) por vencer:</strong><ul class="mb-0">';
-                porVencer.forEach(function(e){
+
+                porVencer.forEach(function (e) {
                     html += '<li>' + e.title + '</li>';
                 });
+
                 html += '</ul></div>';
                 $('#CalendarioWeb').before(html);
             }
         }
 
-        // ===== DELEGACIÓN DE EVENTOS (funciona aunque el modal esté después) =====
+
+        // ==================================================
+        // 3. BOTONES DEL MODAL (agregar / modificar / eliminar)
+        //    Delegación de eventos: funciona aunque el modal esté después
+        // ==================================================
         var NuevoEvento;
 
-        $(document).on('click', '#btnAgregar', function(){
+        $(document).on('click', '#btnAgregar', function () {
             RecolectarDatosGUI();
             EnviarInformacion('agregar', NuevoEvento);
         });
 
-        $(document).on('click', '#btnEliminar', function(){
-            RecolectarDatosGUI();
-            EnviarInformacion('eliminar', NuevoEvento);
-        });
-
-        $(document).on('click', '#btnModificar', function(){
+        $(document).on('click', '#btnModificar', function () {
             RecolectarDatosGUI();
             EnviarInformacion('modificar', NuevoEvento);
         });
 
-        function RecolectarDatosGUI(){
+        $(document).on('click', '#btnEliminar', function () {
+            RecolectarDatosGUI();
+            EnviarInformacion('eliminar', NuevoEvento);
+        });
+
+
+        // ==================================================
+        // 4. FUNCIONES DE APOYO
+        // ==================================================
+
+        // Junta los datos del formulario en un objeto
+        function RecolectarDatosGUI() {
             NuevoEvento = {
                 id: $('#txtID').val(),
                 title: $('#txtTitulo').val(),
                 descripcion: $('#txtDescripcion').val(),
                 color: $('#txtColor').val() || '#ff0000',
                 textColor: $('#txtTextColor').val() || '#FFFFFF',
-                start: $('#txtFecha').val() + " " + $('#txtHora').val(),
-                end: $('#txtFecha').val() + " " + $('#txtHora').val()
+                start: $('#txtFecha').val() + ' ' + $('#txtHora').val(),
+                end: $('#txtFecha').val() + ' ' + $('#txtHora').val()
             };
         }
 
-        function EnviarInformacion(accion, objEvento){
+        // Envía la acción a eventos.php
+        function EnviarInformacion(accion, objEvento) {
             $.ajax({
                 type: 'POST',
                 url: 'eventos.php?accion=' + accion,
                 data: objEvento,
-                success: function(msg){
+
+                success: function (msg) {
                     try {
                         var res = (typeof msg === 'string') ? JSON.parse(msg) : msg;
-                        if(res && res.ok !== false){
+
+                        if (res && res.ok !== false) {
                             $('#CalendarioWeb').fullCalendar('refetchEvents');
-                            $("#exampleModal").modal('hide');
+                            $('#exampleModal').modal('hide');
                         } else {
                             alert(res.mensaje || 'Error al guardar el evento');
                         }
-                    } catch(e) {
+
+                    } catch (e) {
                         console.error('Respuesta del servidor:', msg);
+
                         // Si no es JSON válido pero hay respuesta, intentamos refrescar
-                        if(msg){
+                        if (msg) {
                             $('#CalendarioWeb').fullCalendar('refetchEvents');
-                            $("#exampleModal").modal('hide');
+                            $('#exampleModal').modal('hide');
                         } else {
                             alert('Error en la respuesta del servidor');
                         }
                     }
                 },
-                error: function(xhr, status, error){
+
+                error: function (xhr, status, error) {
                     console.error(xhr.responseText);
-                    alert("Hay un error en la petición...");
+                    alert('Hay un error en la petición...');
                 }
             });
         }
 
-        function limpiarFormulario(){
+        // Deja el formulario del modal en blanco
+        function limpiarFormulario() {
             $('#txtID').val('');
             $('#txtTitulo').val('');
             $('#txtDescripcion').val('');
@@ -224,55 +327,181 @@
             $('#txtTextColor').val('#FFFFFF');
             $('#txtHora').val('10:30');
         }
+
+
+        // ==================================================
+        // 5. PDF: CALENDARIO + ACTIVOS POR VENCER + VENCIDOS
+        // ==================================================
+
+        // Evita que un título con < o & rompa el HTML del reporte
+        function escapeHtml(texto) {
+            return $('<div>').text(texto == null ? '' : texto).html();
+        }
+
+        // Trae TODOS los eventos (no solo los del mes que se ve en pantalla),
+        // para poder listar también los vencidos de meses anteriores.
+        function obtenerTodosLosEventos() {
+            var resultado = $.Deferred();
+
+            // Plan B: solo los eventos que el calendario tiene cargados ahora
+            function usarEventosDelCalendario() {
+                var lista = $('#CalendarioWeb').fullCalendar('clientEvents').map(function (e) {
+                    return { title: e.title, descripcion: e.descripcion, start: e.start.format() };
+                });
+                resultado.resolve(lista);
+            }
+
+            $.ajax({
+                url: 'eventos.php',
+                dataType: 'json',
+                data: { start: '1970-01-01', end: '2100-12-31' }
+            })
+            .done(function (data) {
+                if ($.isArray(data) && data.length > 0) {
+                    resultado.resolve(data);
+                } else {
+                    usarEventosDelCalendario();
+                }
+            })
+            .fail(usarEventosDelCalendario);
+
+            return resultado.promise();
+        }
+
+        // Separa los eventos en vencidos y por vencer
+        function clasificarEventos(lista) {
+            var hoy = moment().startOf('day');
+            var vencidos = [];
+            var porVencer = [];
+
+            lista.forEach(function (e) {
+                var fecha = moment(e.start);
+                if (!fecha.isValid()) { return; }
+
+                var dias = fecha.clone().startOf('day').diff(hoy, 'days');
+                var item = {
+                    titulo: e.title,
+                    descripcion: e.descripcion || '',
+                    fecha: fecha,
+                    dias: dias
+                };
+
+                if (dias < 0) {
+                    vencidos.push(item);
+                } else if (dias <= DIAS_AVISO) {
+                    porVencer.push(item);
+                }
+            });
+
+            // Vencidos: los más atrasados primero. Por vencer: los más próximos primero.
+            vencidos.sort(function (a, b) { return a.dias - b.dias; });
+            porVencer.sort(function (a, b) { return a.dias - b.dias; });
+
+            return { vencidos: vencidos, porVencer: porVencer };
+        }
+
+        // Arma una tabla (vencidos o por vencer) para el PDF
+        function tablaHtml(titulo, items, tipo) {
+            var esVencido = (tipo === 'vencido');
+            var claseTitulo = esVencido ? 'text-danger' : 'text-warning';
+
+            var html = '<h5 class="' + claseTitulo + ' mt-4">' + titulo + ' (' + items.length + ')</h5>';
+
+            if (items.length === 0) {
+                return html + '<p class="text-muted">Sin registros.</p>';
+            }
+
+            html += '<table class="table table-sm table-bordered">';
+            html += '<thead class="thead-light"><tr>';
+            html += '<th>Equipo / Evento</th>';
+            html += '<th>Fecha</th>';
+            html += '<th>' + (esVencido ? 'Días de atraso' : 'Días restantes') + '</th>';
+            html += '<th>Descripción</th>';
+            html += '</tr></thead><tbody>';
+
+            items.forEach(function (i) {
+                var dias = esVencido ? Math.abs(i.dias) : (i.dias === 0 ? 'Hoy' : i.dias);
+
+                html += '<tr>';
+                html += '<td>' + escapeHtml(i.titulo) + '</td>';
+                html += '<td>' + i.fecha.format('DD/MM/YYYY') + '</td>';
+                html += '<td>' + dias + '</td>';
+                html += '<td>' + escapeHtml(i.descripcion) + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        // Construye el reporte completo (fuera de pantalla) y lo regresa
+        function construirReporte(clasif) {
+            var wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:absolute; left:-10000px; top:0;';
+
+            var reporte = document.createElement('div');
+            reporte.style.cssText = 'background:#fff; padding:10px;';
+            wrapper.appendChild(reporte);
+
+            // Encabezado
+            var encabezado = '';
+            encabezado += '<h4 class="mb-0">Reporte de calendario - Audi Center Insurgentes</h4>';
+            encabezado += '<p class="text-muted mb-3">Generado el ' + moment().format('DD/MM/YYYY HH:mm') + '</p>';
+            encabezado += '<p class="mb-3">';
+            encabezado += '<span class="badge badge-danger mr-2">Vencidos: ' + clasif.vencidos.length + '</span>';
+            encabezado += '<span class="badge badge-warning">Por vencer (' + DIAS_AVISO + ' días): ' + clasif.porVencer.length + '</span>';
+            encabezado += '</p>';
+            $(reporte).append(encabezado);
+
+            // Calendario (copia del que se ve en pantalla, sin los botones)
+            var copiaCalendario = document.getElementById('CalendarioWeb').cloneNode(true);
+            copiaCalendario.removeAttribute('id');
+            $(copiaCalendario).find('.fc-left, .fc-right').remove();
+            reporte.appendChild(copiaCalendario);
+
+            // Tablas en una página nueva
+            var tablas = '<div style="page-break-before: always;">';
+            tablas += tablaHtml('Activos vencidos', clasif.vencidos, 'vencido');
+            tablas += tablaHtml('Activos por vencer', clasif.porVencer, 'porVencer');
+            tablas += '</div>';
+            $(reporte).append(tablas);
+
+            return wrapper;
+        }
+
+        $('#btnPdf').on('click', async function () {
+            var $boton = $(this);
+            var textoOriginal = $boton.html();
+            $boton.prop('disabled', true).text('Generando...');
+
+            var wrapper = null;
+
+            try {
+                var lista = await obtenerTodosLosEventos();
+                wrapper = construirReporte(clasificarEventos(lista));
+                document.body.appendChild(wrapper);
+
+                var opciones = {
+                    margin: [10, 10, 10, 10],
+                    filename: 'calendario_' + new Date().toISOString().slice(0, 10) + '.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.fc-row'] }
+                };
+
+                await html2pdf().set(opciones).from(wrapper.firstChild).save();
+
+            } catch (err) {
+                console.error('Error al generar el PDF:', err);
+                alert('No se pudo generar el PDF.');
+            } finally {
+                if (wrapper) { wrapper.remove(); }
+                $boton.prop('disabled', false).html(textoOriginal);
+            }
+        });
+
     </script>
 
-    <!-- Modal -->
-    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Evento</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <input type="hidden" id="txtID" name="txtID">
-            <input type="hidden" id="txtFecha" name="txtFecha">
-
-            <div class="form-row">
-                <div class="form-group col-md-12">
-                    <label>Título:</label>
-                    <input type="text" id="txtTitulo" class="form-control" placeholder="Título del evento">
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Hora del evento:</label>
-                    <div class="input-group clockpicker" data-autoclose="true">
-                        <input type="text" id="txtHora" value="10:30" class="form-control">
-                    </div>
-                </div>
-                <div class="form-group col-md-12">
-                    <label>Descripción:</label>
-                    <textarea id="txtDescripcion" rows="3" class="form-control"></textarea>
-                </div>
-                <div class="form-group col-md-6">
-                    <label>Color de fondo:</label>
-                    <input type="color" value="#ff0000" id="txtColor" class="form-control" style="height:36px;">
-                </div>
-                <div class="form-group col-md-6">
-                    <label>Color del texto:</label>
-                    <input type="color" value="#FFFFFF" id="txtTextColor" class="form-control" style="height:36px;">
-                </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" id="btnAgregar" class="btn btn-success">Agregar</button>
-            <button type="button" id="btnModificar" class="btn btn-success">Modificar</button>
-            <button type="button" id="btnEliminar" class="btn btn-danger">Borrar</button>
-            <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </div>
 </body>
 </html>

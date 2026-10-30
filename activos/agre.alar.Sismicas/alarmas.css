@@ -250,3 +250,11 @@ body {
     background: transparent;
 
 }
+
+/* Evitar que el usuario cambie el tamaño de los campos de texto */
+textarea {
+    resize: none;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+}

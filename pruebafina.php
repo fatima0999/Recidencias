@@ -57,10 +57,6 @@ $vencidos      = $vencidos_extintores + $vencidos_botiquines;
 // ==========================================
 // DASHBOARD - ACTIVOS POR TIPO (INVENTARIO)
 // ==========================================
-// Un conteo simple por cada tabla de activo.
-// $total_extintores y $total_botiquines ya los tenemos de arriba,
-// solo faltan las 6 tablas restantes.
-
 $sql = "SELECT COUNT(*) AS total FROM tb_detectores_humo";
 $total_detectores = pg_fetch_result(pg_query($conexion, $sql), 0, 'total');
 
@@ -82,11 +78,6 @@ $total_salidas = pg_fetch_result(pg_query($conexion, $sql), 0, 'total');
 // ==========================================
 // DASHBOARD - TABLA DE TODOS LOS ACTIVOS
 // ==========================================
-// Combina extintores y botiquines en una sola lista con
-// identificador, tipo, área, fecha crítica y estado ya calculado.
-// Cuando agregues otra tabla, se suma aquí con el mismo patrón
-// (UNION ALL + su propio SELECT con el CASE de estado).
-
 $sqlTablaActivos = "
     SELECT
         'EXT-' || e.id_extintor AS identificador,
@@ -171,16 +162,10 @@ if ($resultadoTablaActivos) {
             <!-- BOTONES DE LA DERECHA -->
             <div class="ms-auto d-flex align-items-center gap-2">
 
-                <!-- PDF -->
-                <a href="ARCHIVO" download="Reporte" class="btn btn-outline-secondary btn-sm">
+                <!-- PDF (descarga solo el dashboard) -->
+                <button type="button" id="btnPdf" class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-file-pdf text-danger me-1"></i>PDF
-                </a>
-
-                <!-- NOTIFICACIONES -->
-                <a href="#" class="btn btn-light position-relative btn-sm">
-                    <i class="fas fa-bell"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">5</span>
-                </a>
+                </button>
 
                 <!-- PERFIL -->
                 <button class="navbar-toggler btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasDerecho">
@@ -291,7 +276,7 @@ if ($resultadoTablaActivos) {
     <!-- ========== CONTENIDO PRINCIPAL ========== -->
     <div class="container mt-5 pt-5">
 
-        <!-- MENSAJE DE BIENVENIDA -->
+        <!-- MENSAJE DE BIENVENIDA (NO entra al PDF) -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h3 class="text-primary m-0"><i class="fas fa-user-check me-2"></i>Bienvenida, <?= $usuario ?></h3>
@@ -299,96 +284,106 @@ if ($resultadoTablaActivos) {
             </div>
         </div>
 
-        <!-- TARJETAS DEL DASHBOARD -->
-        <div class="row g-3 mb-4">
+        <!-- ================= LO QUE SE VA AL PDF ================= -->
+        <div id="dashboardPdf" class="px-3 pb-3">
 
-            <!-- TOTAL DE ACTIVOS -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card card-metric p-3">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-shape bg-primary me-3"><i class="fas fa-boxes"></i></div>
-                        <div>
-                            <small class="text-muted">Total de activos</small>
-                            <h4 class="font-weight-bold m-0"><?= $total_activos ?></h4>
+            <!-- TARJETAS DEL DASHBOARD -->
+            <div class="row g-3 mb-4">
+
+                <!-- TOTAL DE ACTIVOS -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="card card-metric p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-shape bg-primary me-3"><i class="fas fa-boxes"></i></div>
+                            <div>
+                                <small class="text-muted">Total de activos</small>
+                                <h4 class="font-weight-bold m-0"><?= $total_activos ?></h4>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- AL CORRIENTE -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="card card-metric p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-shape bg-success me-3"><i class="fas fa-check-circle"></i></div>
+                            <div>
+                                <small class="text-muted">Al corriente</small>
+                                <h4 class="font-weight-bold m-0"><?= $al_corriente ?></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POR VENCER -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="card card-metric p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-shape bg-warning me-3"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div>
+                                <small class="text-muted">Por vencer</small>
+                                <h4 class="font-weight-bold m-0"><?= $por_vencer ?></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VENCIDOS -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="card card-metric p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-shape bg-danger me-3"><i class="fas fa-times-circle"></i></div>
+                            <div>
+                                <small class="text-muted">Vencidos</small>
+                                <h4 class="font-weight-bold m-0"><?= $vencidos ?></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- AL CORRIENTE -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card card-metric p-3">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-shape bg-success me-3"><i class="fas fa-check-circle"></i></div>
-                        <div>
-                            <small class="text-muted">Al corriente</small>
-                            <h4 class="font-weight-bold m-0"><?= $al_corriente ?></h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- GRÁFICAS -->
+            <div class="row g-4">
 
-            <!-- POR VENCER -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card card-metric p-3">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-shape bg-warning me-3"><i class="fas fa-exclamation-triangle"></i></div>
-                        <div>
-                            <small class="text-muted">Por vencer</small>
-                            <h4 class="font-weight-bold m-0"><?= $por_vencer ?></h4>
+                <!-- ESTADO DE LOS ACTIVOS -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="card shadow-sm" style="page-break-inside: avoid;">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Estado de los Activos</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="graficoActivos"></canvas>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- VENCIDOS -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card card-metric p-3">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-shape bg-danger me-3"><i class="fas fa-times-circle"></i></div>
-                        <div>
-                            <small class="text-muted">Vencidos</small>
-                            <h4 class="font-weight-bold m-0"><?= $vencidos ?></h4>
+                <!-- ACTIVOS POR TIPO -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="card shadow-sm" style="page-break-inside: avoid;">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-boxes me-2 text-primary"></i>Activos por Tipo</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="graficoPorTipo"></canvas>
                         </div>
                     </div>
                 </div>
+
             </div>
 
         </div>
-
-        <!-- GRÁFICAS -->
-        <div class="row g-4">
-
-            <!-- ESTADO DE LOS ACTIVOS -->
-            <div class="col-lg-6 col-md-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Estado de los Activos</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="graficoActivos"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ACTIVOS POR TIPO -->
-            <div class="col-lg-6 col-md-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0"><i class="fas fa-boxes me-2 text-primary"></i>Activos por Tipo</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="graficoPorTipo"></canvas>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+        <!-- ================= FIN DEL PDF ================= -->
 
     </div>
+
     <!-- ========== JAVASCRIPT ========== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Sin animación para que las gráficas salgan completas en el PDF -->
+    <script>Chart.defaults.animation = false;</script>
 
     <!-- DATOS PARA LAS GRÁFICAS -->
     <script>
@@ -423,39 +418,72 @@ if ($resultadoTablaActivos) {
     </script>
     <script src="graficos.js"></script>
 
-    <!-- BUSCADOR Y FILTRO DE LA TABLA DE ACTIVOS -->
+    <!-- BUSCADOR Y FILTRO DE LA TABLA DE ACTIVOS (solo si existen en la página) -->
     <script>
-
         const buscador = document.getElementById('buscadorActivos');
         const filtroEstado = document.getElementById('filtroEstado');
         const filasTabla = document.querySelectorAll('#tablaActivos tbody tr');
 
         function filtrarTabla() {
-
             const textoBusqueda = buscador.value.toLowerCase();
             const estadoSeleccionado = filtroEstado.value;
 
-            filasTabla.forEach(function(fila) {
-
+            filasTabla.forEach(function (fila) {
                 const texto = fila.textContent.toLowerCase();
                 const estadoFila = fila.dataset.estado || '';
 
                 const coincideTexto = texto.includes(textoBusqueda);
                 const coincideEstado = (estadoSeleccionado === '') || (estadoFila === estadoSeleccionado);
 
-                if (coincideTexto && coincideEstado) {
-                    fila.style.display = '';
-                } else {
-                    fila.style.display = 'none';
-                }
-
+                fila.style.display = (coincideTexto && coincideEstado) ? '' : 'none';
             });
-
         }
 
-        buscador.addEventListener('input', filtrarTabla);
-        filtroEstado.addEventListener('change', filtrarTabla);
+        if (buscador && filtroEstado) {
+            buscador.addEventListener('input', filtrarTabla);
+            filtroEstado.addEventListener('change', filtrarTabla);
+        }
+    </script>
 
+    <!-- DESCARGAR DASHBOARD EN PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        document.getElementById('btnPdf').addEventListener('click', async function () {
+            const elemento = document.getElementById('dashboardPdf');
+            const reemplazos = [];
+
+            // Convertir cada gráfica (canvas) a imagen para que salga en el PDF
+            elemento.querySelectorAll('canvas').forEach(function (canvas) {
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png', 1.0);
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.maxWidth = '100%';
+                img.style.display = 'block';
+                canvas.style.display = 'none';
+                canvas.parentNode.insertBefore(img, canvas);
+                reemplazos.push({ canvas: canvas, img: img });
+            });
+
+            const opciones = {
+                margin: [10, 10, 10, 10],
+                filename: 'dashboard_' + new Date().toISOString().slice(0, 10) + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['css'], avoid: '.card' }
+            };
+
+            try {
+                await html2pdf().set(opciones).from(elemento).save();
+            } finally {
+                // Regresar los canvas a su lugar
+                reemplazos.forEach(function (r) {
+                    r.img.remove();
+                    r.canvas.style.display = '';
+                });
+            }
+        });
     </script>
 
 </body>

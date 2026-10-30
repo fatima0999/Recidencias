@@ -1,6 +1,7 @@
 <?php
+
 /* ==========================================================
-   CONEXIÓN
+   CONEXIÓN A POSTGRESQL
    ========================================================== */
 
 require_once __DIR__ . '/../../../clases/conexion.php';
@@ -8,53 +9,44 @@ require_once __DIR__ . '/../../../clases/conexion.php';
 $conexionClase = new Conexion();
 $conexion = $conexionClase->conectar();
 
-/* ==========================================================
-   MÉTRICAS DE LUCES DE EMERGENCIA DEL SÓTANO
-   Solo cuenta registros asociados a áreas cuyo nivel sea Sótano.
-   ========================================================== */
-
-$sqlConteos = "
-    SELECT
-        COUNT(*) AS total,
-        COUNT(*) FILTER (
-            WHERE l.fecha_proxima_revision > CURRENT_DATE + INTERVAL '30 days'
-        ) AS al_corriente,
-        COUNT(*) FILTER (
-            WHERE l.fecha_proxima_revision BETWEEN CURRENT_DATE
-              AND CURRENT_DATE + INTERVAL '30 days'
-        ) AS por_vencer,
-        COUNT(*) FILTER (
-            WHERE l.fecha_proxima_revision < CURRENT_DATE
-        ) AS vencidos
-    FROM tb_luces_emergencia l
-    INNER JOIN tb_areas a ON l.id_area = a.id_area
-    WHERE a.nivel = 'Sótano'
-";
-
-$resultadoConteos = pg_query($conexion, $sqlConteos);
-
-if ($resultadoConteos === false) {
-    die('Error al consultar las métricas de luces de emergencia. Verifica la tabla tb_luces_emergencia y la conexión.');
+if (!$conexion) {
+    die("Error: No se pudo conectar con PostgreSQL.");
 }
 
-$conteos = pg_fetch_assoc($resultadoConteos);
-
-$total_luces  = (int) ($conteos['total'] ?? 0);
-$al_corriente = (int) ($conteos['al_corriente'] ?? 0);
-$por_vencer   = (int) ($conteos['por_vencer'] ?? 0);
-$vencidos     = (int) ($conteos['vencidos'] ?? 0);
-
-$cumplimiento = $total_luces > 0
-    ? round(($al_corriente / $total_luces) * 100)
-    : 0;
 
 /* ==========================================================
-   LISTADO DE LUCES DE EMERGENCIA DEL SÓTANO
+   FUNCIÓN PARA PROTEGER LOS DATOS
    ========================================================== */
 
-$sqlLuces = "
+function e($valor) {
+    return htmlspecialchars((string)($valor ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+
+/* ==========================================================
+   AVISO DESPUÉS DE GUARDAR / ELIMINAR (parámetro ?msg=)
+   ========================================================== */
+
+$mensajes = [
+    'guardado'  => ['ok',  'Luz de emergencia guardada correctamente.'],
+    'eliminado' => ['ok',  'Luz de emergencia eliminada correctamente.'],
+    'error'     => ['bad', 'No se pudo completar la acción.'],
+];
+
+$aviso = $mensajes[$_GET['msg'] ?? ''] ?? null;
+
+
+/* ==========================================================
+   CONSULTA DE LUCES DE EMERGENCIA DEL SÓTANO
+   ========================================================== */
+
+$sql = "
     SELECT
         l.id_luz,
+        COALESCE(
+            NULLIF(l.numero_folio, ''),
+            'LUZ-' || LPAD(l.id_luz::text, 3, '0')
+        ) AS folio,
         l.tipo_iluminacion,
         l.marca,
         l.modelo,
@@ -65,54 +57,112 @@ $sqlLuces = "
         l.fecha_proxima_revision,
         l.evidencia_foto,
         l.observaciones,
+        l.ubicacion_detalle,
         a.nombre_area
-    FROM tb_luces_emergencia l
-    INNER JOIN tb_areas a ON l.id_area = a.id_area
+    FROM public.tb_luces_emergencia l
+    INNER JOIN public.tb_areas a
+        ON l.id_area = a.id_area
     WHERE a.nivel = 'Sótano'
-    ORDER BY l.id_luz ASC
+      AND a.activo = TRUE
+    ORDER BY
+        l.fecha_proxima_revision ASC NULLS LAST,
+        l.id_luz ASC
 ";
 
-$resultadoLuces = pg_query($conexion, $sqlLuces);
+$res = pg_query($conexion, $sql);
 
-if ($resultadoLuces === false) {
-    die('Error al consultar el registro de luces de emergencia. Verifica los nombres de las columnas de tb_luces_emergencia y tb_areas.');
+if (!$res) {
+    die(
+        "Error al consultar las luces de emergencia: " .
+        pg_last_error($conexion)
+    );
 }
 
-$listaLuces = [];
+/* ==========================================================
+   PREPARAR LOS DATOS
+   ========================================================== */
 
-$hoy    = date('Y-m-d');
+$meses = [
+    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+];
+
+$hoy = date('Y-m-d');
 $limite = date('Y-m-d', strtotime('+30 days'));
 
-while ($fila = pg_fetch_assoc($resultadoLuces)) {
+$lista = [];
+$areas = [];
 
-    $fecha = $fila['fecha_proxima_revision'];
+$conteo = [
+    'Al corriente' => 0,
+    'Por vencer' => 0,
+    'Vencido' => 0,
+    'Sin fecha' => 0
+];
+
+while ($f = pg_fetch_assoc($res)) {
+
+    $fecha = $f['fecha_proxima_revision'];
 
     if (empty($fecha)) {
 
-        $estadoSeguimiento = 'Sin fecha';
-        $fechaFormateada = '—';
+        $estado = 'Sin fecha';
+        $f['fecha_txt'] = '—';
 
     } else {
 
-        $fechaFormateada = date('d/m/Y', strtotime($fecha));
+        $t = strtotime($fecha);
+
+        $f['fecha_txt'] =
+            date('j', $t) . ' ' .
+            $meses[(int)date('n', $t) - 1] . ' ' .
+            date('Y', $t);
 
         if ($fecha < $hoy) {
-            $estadoSeguimiento = 'Vencido';
+            $estado = 'Vencido';
         } elseif ($fecha <= $limite) {
-            $estadoSeguimiento = 'Por vencer';
+            $estado = 'Por vencer';
         } else {
-            $estadoSeguimiento = 'Al corriente';
+            $estado = 'Al corriente';
         }
     }
 
-    $fila['estado_seguimiento'] = $estadoSeguimiento;
-    $fila['fecha_formateada'] = $fechaFormateada;
+    $f['estado'] = $estado;
 
-    $listaLuces[] = $fila;
+    $conteo[$estado]++;
+
+    $areas[$f['nombre_area']] = true;
+
+    $lista[] = $f;
 }
-?>
-<!DOCTYPE html>
 
+ksort($areas);
+
+$total = count($lista);
+
+$cumplimiento = $total > 0
+    ? round(($conteo['Al corriente'] / $total) * 100)
+    : 0;
+
+$clases = [
+    'Al corriente' => 'ok',
+    'Por vencer' => 'warn',
+    'Vencido' => 'bad',
+    'Sin fecha' => 'none'
+];
+
+$jsonLista = json_encode(
+    $lista,
+    JSON_HEX_TAG |
+    JSON_HEX_AMP |
+    JSON_HEX_APOS |
+    JSON_HEX_QUOT |
+    JSON_UNESCAPED_UNICODE
+);
+
+?>
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -121,377 +171,841 @@ while ($fila = pg_fetch_assoc($resultadoLuces)) {
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Luces de Emergencia - Sótano</title>
+    <title>Luces de emergencia - Sótano</title>
 
-
-    <!-- BOOTSTRAP 5 CSS -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
-    <!-- FONT AWESOME -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
     >
 
-    <!-- LIBRERÍA PARA GENERAR QR -->
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-    </script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
 
+        :root {
+            --bg: #05070b;
+            --panel: #0d1117;
+            --borde: #1c2430;
+            --texto: #f2f4f8;
+            --suave: #8b95a5;
+            --verde: #2fd4a0;
+            --amarillo: #f0b429;
+            --rojo: #ef5b6b;
+            --acento: #d6143c;
+        }
+
         body {
-            padding-top: 100px;
+            background: var(--bg);
+            color: var(--texto);
+            font-family: "Segoe UI", system-ui, sans-serif;
         }
 
-        .contenedor-metricas {
-            padding-left: 20px;
-            padding-right: 20px;
+        a {
+            text-decoration: none;
         }
 
-        @media (max-width: 768px) {
-
-            body {
-                padding-top: 90px;
-            }
-
-            .contenedor-metricas {
-                padding-left: 12px;
-                padding-right: 12px;
-            }
-
+        .barra {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            border-bottom: 1px solid var(--borde);
         }
 
-        /* CONTENEDOR DEL QR */
+        .barra h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .volver {
+            color: var(--suave);
+            display: inline-block;
+            padding: 14px 28px 0;
+        }
+
+        .volver:hover {
+            color: var(--texto);
+        }
+
+        .cabecera {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 28px 20px;
+        }
+
+        .cabecera h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .campo {
+            background: var(--bg);
+            color: var(--texto);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-width: 160px;
+        }
+
+        .campo:focus {
+            outline: 2px solid var(--acento);
+            outline-offset: 1px;
+        }
+
+        .btn-agregar {
+            background: var(--acento);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 600;
+            border: 0;
+        }
+
+        .btn-agregar:hover {
+            background: #b60f33;
+            color: #fff;
+        }
+
+        /* AVISO (guardado / eliminado / error) */
+
+        .aviso {
+            margin: 0 28px 18px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .aviso-ok {
+            background: #0f2c26;
+            color: var(--verde);
+        }
+
+        .aviso-bad {
+            background: #34161b;
+            color: var(--rojo);
+        }
+
+        .tarjetas {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            padding: 0 28px 24px;
+        }
+
+        .tarjeta {
+            background: var(--panel);
+            border: 1px solid var(--borde);
+            border-top-width: 3px;
+            border-radius: 18px;
+            padding: 22px 26px;
+        }
+
+        .tarjeta small {
+            color: var(--suave);
+            font-size: 1rem;
+        }
+
+        .tarjeta .num {
+            font-size: 2.1rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .t-ok {
+            border-top-color: var(--verde);
+        }
+
+        .t-warn {
+            border-top-color: var(--amarillo);
+        }
+
+        .t-bad {
+            border-top-color: var(--rojo);
+        }
+
+        .c-ok {
+            color: var(--verde);
+        }
+
+        .c-warn {
+            color: var(--amarillo);
+        }
+
+        .c-bad {
+            color: var(--rojo);
+        }
+
+        .lista {
+            background: var(--panel);
+            border: 1px solid var(--borde);
+            border-radius: 22px;
+            margin: 0 28px 40px;
+            padding: 14px 36px;
+        }
+
+        .fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 0;
+            border-bottom: 1px solid var(--borde);
+            cursor: pointer;
+        }
+
+        .fila:last-child {
+            border-bottom: 0;
+        }
+
+        .fila:hover .titulo {
+            color: var(--acento);
+        }
+
+        .fila:focus-visible {
+            outline: 2px solid var(--acento);
+            outline-offset: 4px;
+        }
+
+        .icono {
+            width: 50px;
+            height: 50px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            background: #161b24;
+            border-radius: 12px;
+            color: var(--amarillo);
+            font-size: 1.2rem;
+        }
+
+        .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .titulo {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .sub {
+            color: var(--suave);
+        }
+
+        .lado {
+            text-align: right;
+            color: var(--suave);
+        }
+
+        .badge-e {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* Estado + botón Eliminar en la misma línea */
+
+        .lado-acciones {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .lado-acciones .badge-e {
+            margin-top: 0;
+        }
+
+        .btn-eliminar {
+            background: transparent;
+            color: var(--rojo);
+            border: 1px solid #5a2630;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-eliminar:hover {
+            background: #34161b;
+            border-color: var(--rojo);
+        }
+
+        .btn-eliminar:focus-visible {
+            outline: 2px solid var(--rojo);
+            outline-offset: 2px;
+        }
+
+        .b-ok {
+            background: #0f2c26;
+            color: var(--verde);
+        }
+
+        .b-warn {
+            background: #2b2410;
+            color: var(--amarillo);
+        }
+
+        .b-bad {
+            background: #34161b;
+            color: var(--rojo);
+        }
+
+        .b-none {
+            background: #1c2430;
+            color: var(--suave);
+        }
+
+        .vacio {
+            text-align: center;
+            color: var(--suave);
+            padding: 40px 0;
+        }
+
+        /* MODAL */
+
+        .modal-content {
+            background: var(--panel);
+            color: var(--texto);
+            border: 1px solid var(--borde);
+            border-radius: 20px;
+        }
+
+        .modal-header,
+        .modal-footer {
+            border: 0;
+        }
+
+        .cerrar {
+            background: transparent;
+            border: 1px solid var(--borde);
+            color: var(--texto);
+            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+        }
+
+        .pestanas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+
+        .pestana {
+            background: transparent;
+            color: var(--suave);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 8px 16px;
+        }
+
+        .pestana.activa {
+            color: var(--acento);
+            border-color: var(--acento);
+            background: #1a0d12;
+        }
+
+        .rejilla {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+        }
+
+        .rejilla small {
+            display: block;
+            color: var(--suave);
+        }
+
+        .rejilla strong {
+            font-size: 1.1rem;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 10px;
+            margin-top: 26px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sec {
+            background: transparent;
+            color: var(--texto);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 9px 16px;
+            font-weight: 600;
+        }
+
+        .btn-sec:hover {
+            border-color: var(--acento);
+            color: var(--texto);
+        }
 
         #contenedorQR {
             display: flex;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            padding: 16px;
+            background: #fff;
+            border-radius: 14px;
+            width: fit-content;
+            margin: 12px auto;
         }
 
-        #contenedorQR img {
-            max-width: 250px;
-            height: auto;
+        .panel-tab {
+            display: none;
         }
 
-        .folio-qr {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 15px;
+        .panel-tab.activo {
+            display: block;
+        }
+
+        .foto {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--borde);
+        }
+
+        @media (max-width: 992px) {
+            .tarjetas {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .tarjetas {
+                grid-template-columns: 1fr;
+                padding: 0 14px 20px;
+            }
+
+            .barra,
+            .cabecera {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .aviso {
+                margin-left: 14px;
+                margin-right: 14px;
+            }
+
+            .lista {
+                margin: 0 14px 30px;
+                padding: 6px 16px;
+            }
+
+            .fila {
+                flex-wrap: wrap;
+            }
+
+            .lado {
+                text-align: left;
+                width: 100%;
+            }
+
+            .lado-acciones {
+                justify-content: flex-start;
+            }
+
+            .rejilla {
+                grid-template-columns: 1fr;
+            }
         }
 
     </style>
 
 </head>
 
-
 <body>
 
+    <div class="barra">
+        <h1>Activos</h1>
+    </div>
 
-    <!-- =====================================================
-        NAVBAR
-        ===================================================== -->
+    <!-- REGRESAR AL SÓTANO -->
+    <a class="volver" href="../sotano.php">
+        <i class="fas fa-arrow-left me-1"></i>
+        Sótano
+    </a>
 
-    <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
+    <!-- CABECERA Y FILTROS -->
 
-        <div class="container-fluid">
+    <div class="cabecera">
 
-            <div class="border-start ps-3">
+        <h2>
+            <i class="fas fa-lightbulb me-2" style="color:var(--amarillo)"></i>
+            Luces de emergencia
+        </h2>
 
-                <h6 class="mb-0 titulo-audi">
-                    Sótano
-                </h6>
+        <div class="filtros">
 
-            </div>
+            <input
+                type="text"
+                id="buscador"
+                class="campo"
+                placeholder="Buscar folio, marca, modelo..."
+            >
 
+            <select
+                id="filtroEstado"
+                class="campo"
+                aria-label="Filtrar por estado"
+            >
 
-            <div class="ms-auto d-flex align-items-center gap-2">
+                <option value="">Estado</option>
 
-                <a
-                    href="../../areas.php/sotano.php"
-                    class="btn btn-outline-danger"
-                >
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Volver
-                </a>
+                <?php foreach (array_keys($conteo) as $est): ?>
 
-            </div>
+                    <option value="<?= e($est) ?>">
+                        <?= e($est) ?>
+                    </option>
 
-        </div>
+                <?php endforeach; ?>
 
-    </nav>
+            </select>
 
+            <select
+                id="filtroArea"
+                class="campo"
+                aria-label="Filtrar por área"
+            >
 
+                <option value="">Área</option>
 
-    <!-- =====================================================
-        CONTENEDOR DE MÉTRICAS
-        ===================================================== -->
+                <?php foreach (array_keys($areas) as $ar): ?>
 
-    <div class="container-fluid contenedor-metricas">
+                    <option value="<?= e($ar) ?>">
+                        <?= e($ar) ?>
+                    </option>
 
-        <div class="row g-3 mb-4">
+                <?php endforeach; ?>
 
-            <!-- CUMPLIMIENTO -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card p-3 border-start border-success border-4 shadow-sm">
-                    <small class="text-muted">Cumplimiento</small>
-                    <h3 class="fw-bold text-success m-0">
-                        <?= $cumplimiento ?>%
-                    </h3>
-                </div>
-            </div>
+            </select>
 
-            <!-- AL CORRIENTE -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card p-3 border-start border-success border-4 shadow-sm">
-                    <small class="text-muted">Al corriente</small>
-                    <h3 class="fw-bold m-0">
-                        <?= $al_corriente ?>
-                    </h3>
-                </div>
-            </div>
-
-            <!-- POR VENCER -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card p-3 border-start border-warning border-4 shadow-sm">
-                    <small class="text-muted">Por vencer</small>
-                    <h3 class="fw-bold text-warning m-0">
-                        <?= $por_vencer ?>
-                    </h3>
-                </div>
-            </div>
-
-            <!-- VENCIDOS -->
-            <div class="col-lg-3 col-md-6">
-                <div class="card p-3 border-start border-danger border-4 shadow-sm">
-                    <small class="text-muted">Vencidos</small>
-                    <h3 class="fw-bold text-danger m-0">
-                        <?= $vencidos ?>
-                    </h3>
-                </div>
-            </div>
+            <!-- RUTA PARA AGREGAR -->
+            <a
+                href="./luces/lucesemergencia.php"
+                class="btn-agregar"
+            >
+                + Agregar
+            </a>
 
         </div>
 
     </div>
 
+    <!-- AVISO (guardado / eliminado / error) -->
 
+    <?php if ($aviso): ?>
 
-    <!-- =====================================================
-        ENCABEZADO ACTIVOS + BOTÓN AGREGAR
-        ===================================================== -->
+        <div class="aviso aviso-<?= e($aviso[0]) ?>" role="alert">
+            <?= e($aviso[1]) ?>
+        </div>
 
-    <div class="container d-flex justify-content-between align-items-center mt-1 pt-3">
+    <?php endif; ?>
 
-        <h5>ACTIVOS</h5>
+    <!-- TARJETAS DE RESUMEN -->
 
-        <!-- CAMBIA ESTA RUTA si tu formulario de alta está en otra carpeta -->
-        <a
-            href="../../agre.luc.Emegen/luc.Emeregencia.php"
-            class="btn btn-primary"
+    <div class="tarjetas">
+
+        <div class="tarjeta t-ok">
+            <small>Cumplimiento</small>
+            <div class="num c-ok">
+                <?= $cumplimiento ?>%
+            </div>
+        </div>
+
+        <div class="tarjeta t-ok">
+            <small>Al corriente</small>
+            <div class="num">
+                <?= $conteo['Al corriente'] ?>
+            </div>
+        </div>
+
+        <div class="tarjeta t-warn">
+            <small>Por vencer</small>
+            <div class="num c-warn">
+                <?= $conteo['Por vencer'] ?>
+            </div>
+        </div>
+
+        <div class="tarjeta t-bad">
+            <small>Vencidos</small>
+            <div class="num c-bad">
+                <?= $conteo['Vencido'] ?>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LISTADO DE LUCES -->
+
+    <div class="lista" id="lista">
+
+        <?php foreach ($lista as $i => $l): ?>
+
+            <div
+                class="fila"
+                tabindex="0"
+                role="button"
+                data-i="<?= $i ?>"
+                data-estado="<?= e($l['estado']) ?>"
+                data-area="<?= e($l['nombre_area']) ?>"
+                data-texto="<?= e(strtolower(
+                    $l['folio'] . ' ' .
+                    $l['marca'] . ' ' .
+                    $l['modelo'] . ' ' .
+                    $l['tipo_iluminacion'] . ' ' .
+                    $l['nombre_area'] . ' ' .
+                    $l['ubicacion_detalle']
+                )) ?>"
+            >
+
+                <div class="icono">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+
+                <div class="info">
+
+                    <div class="titulo">
+                        Luz de emergencia
+                        <?= e($l['tipo_iluminacion']) ?>
+                    </div>
+
+                    <div class="sub">
+
+                        <?= e($l['folio']) ?>
+                        ·
+                        <?= e($l['nombre_area']) ?>
+
+                        <?php if (!empty($l['ubicacion_detalle'])): ?>
+
+                            · <?= e($l['ubicacion_detalle']) ?>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+                <div class="lado">
+
+                    Próx. revisión:
+                    <?= e($l['fecha_txt']) ?>
+
+                    <div class="lado-acciones">
+
+                        <span class="badge-e b-<?= $clases[$l['estado']] ?>">
+                            <?= e($l['estado']) ?>
+                        </span>
+
+                        <!-- BOTÓN ELIMINAR -->
+                        <button
+                            type="button"
+                            class="btn-eliminar"
+                            title="Eliminar luz de emergencia"
+                            data-id="<?= (int) $l['id_luz'] ?>"
+                            data-folio="<?= e($l['folio']) ?>"
+                        >
+                            <i class="fas fa-trash me-1"></i>
+                            Eliminar
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        <?php endforeach; ?>
+
+        <div
+            class="vacio"
+            id="vacio"
+            <?= empty($lista) ? '' : 'style="display:none"' ?>
         >
-            <i class="fas fa-plus me-1"></i>
-            Agregar
-        </a>
 
-    </div>
-
-
-
-    <!-- =====================================================
-        TABLA DE LUCES DE EMERGENCIA
-        ===================================================== -->
-
-    <div class="container-fluid">
-
-        <div class="row g-4 mt-1">
-
-            <div class="col-12">
-
-                <div class="card shadow-sm mb-5">
-
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2 text-primary"></i>
-                            Luces de emergencia del Sótano
-                        </h5>
-                    </div>
-
-
-                    <div class="card-body">
-
-                        <!-- BUSCADOR Y FILTRO -->
-                        <div class="row g-2 mb-3">
-
-                            <div class="col-md-6">
-                                <input
-                                    type="text"
-                                    id="buscadorLuces"
-                                    class="form-control"
-                                    placeholder="Buscar por ID, área, marca o modelo..."
-                                >
-                            </div>
-
-                            <div class="col-md-4">
-                                <select id="filtroEstado" class="form-select">
-                                    <option value="">Todos los estados</option>
-                                    <option value="Al corriente">Al corriente</option>
-                                    <option value="Por vencer">Por vencer</option>
-                                    <option value="Vencido">Vencido</option>
-                                    <option value="Sin fecha">Sin fecha</option>
-                                </select>
-                            </div>
-
-                        </div>
-
-
-                        <!-- TABLA -->
-                        <div class="table-responsive">
-
-                            <table
-                                class="table table-hover align-middle"
-                                id="tablaLuces"
-                            >
-
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Área</th>
-                                        <th>Tipo de iluminación</th>
-                                        <th>Marca</th>
-                                        <th>Modelo</th>
-                                        <th>Duración de batería</th>
-                                        <th>Estado físico</th>
-                                        <th>Próx. revisión</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-
-
-                                <tbody>
-
-                                    <?php foreach ($listaLuces as $luz): ?>
-
-                                        <?php
-
-                                        $claseEstado = 'bg-secondary';
-
-                                        if ($luz['estado_seguimiento'] === 'Al corriente') {
-                                            $claseEstado = 'bg-success';
-                                        } elseif ($luz['estado_seguimiento'] === 'Por vencer') {
-                                            $claseEstado = 'bg-warning text-dark';
-                                        } elseif ($luz['estado_seguimiento'] === 'Vencido') {
-                                            $claseEstado = 'bg-danger';
-                                        }
-
-                                        ?>
-
-                                        <tr data-estado="<?= htmlspecialchars($luz['estado_seguimiento'], ENT_QUOTES, 'UTF-8') ?>">
-
-                                            <td><?= htmlspecialchars($luz['id_luz'], ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['nombre_area'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['tipo_iluminacion'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['marca'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['modelo'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['duracion_bateria'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['estado_fisico'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td><?= htmlspecialchars($luz['fecha_formateada'], ENT_QUOTES, 'UTF-8') ?></td>
-
-                                            <td>
-                                                <span class="badge <?= $claseEstado ?>">
-                                                    <?= htmlspecialchars($luz['estado_seguimiento'], ENT_QUOTES, 'UTF-8') ?>
-                                                </span>
-                                            </td>
-
-                                            <!-- ACCIONES (VER + QR) -->
-                                            <td>
-
-                                                <div class="d-flex gap-1">
-
-                                                    <a
-                                                        href="../../areas.php/seguimientoSotano.php/ver_luces.php?id=<?= (int) $luz['id_luz'] ?>"
-                                                        class="btn btn-outline-primary btn-sm"
-                                                        title="Ver luz de emergencia"
-                                                    >
-                                                        <i class="fas fa-eye me-1"></i>
-                                                        Ver
-                                                    </a>
-
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-outline-dark btn-sm"
-                                                        onclick="mostrarQR(
-                                                            <?= (int) $luz['id_luz'] ?>,
-                                                            '<?= htmlspecialchars(
-                                                                $luz['id_luz'],
-                                                                ENT_QUOTES,
-                                                                'UTF-8'
-                                                            ) ?>'
-                                                        )"
-                                                    >
-                                                        <i class="fas fa-qrcode me-1"></i>
-                                                        QR
-                                                    </button>
-
-                                                </div>
-
-                                            </td>
-
-                                        </tr>
-
-                                    <?php endforeach; ?>
-
-
-                                    <!-- SIN REGISTROS -->
-                                    <?php if (empty($listaLuces)): ?>
-
-                                        <tr data-estado="">
-                                            <td colspan="10" class="text-center text-muted py-4">
-                                                No hay luces de emergencia registradas en el Sótano.
-                                            </td>
-                                        </tr>
-
-                                    <?php endif; ?>
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
+            <?= empty($lista)
+                ? 'Aún no hay luces de emergencia en el Sótano. Usa “+ Agregar” para registrar la primera.'
+                : 'Ninguna luz coincide con los filtros.'
+            ?>
 
         </div>
 
     </div>
 
-
-
-    <!-- =====================================================
-        MODAL DEL QR
-        ===================================================== -->
+    <!-- MODAL DE DETALLE -->
 
     <div
         class="modal fade"
-        id="modalQR"
+        id="modalLuz"
+        tabindex="-1"
+        aria-hidden="true"
+    >
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <div class="modal-content">
+
+                <div class="modal-header align-items-start p-4 pb-0">
+
+                    <div>
+
+                        <h4 class="mb-1" id="mTitulo"></h4>
+
+                        <div class="sub">
+
+                            <span id="mSub"></span>
+
+                            <span
+                                class="badge-e"
+                                id="mBadge"
+                                style="margin:0 0 0 6px"
+                            ></span>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="cerrar"
+                        data-bs-dismiss="modal"
+                        aria-label="Cerrar"
+                    >
+                        <i class="fas fa-times"></i>
+                    </button>
+
+                </div>
+
+                <div class="modal-body p-4">
+
+                    <div class="pestanas">
+
+                        <button class="pestana activa" data-tab="info">
+                            Info
+                        </button>
+
+                        <button class="pestana" data-tab="evid">
+                            <i class="fas fa-camera me-1"></i>
+                            Evidencias
+                        </button>
+
+                        <button class="pestana" data-tab="qr">
+                            <i class="fas fa-qrcode me-1"></i>
+                            QR
+                        </button>
+
+                        <button class="pestana" data-tab="hist">
+                            <i class="fas fa-history me-1"></i>
+                            Historial
+                        </button>
+
+                    </div>
+
+                    <!-- INFORMACIÓN -->
+
+                    <div class="panel-tab activo" id="tab-info">
+
+                        <div class="rejilla" id="mInfo"></div>
+
+                        <div class="acciones">
+
+                            <button
+                                class="btn-agregar"
+                                data-tab="evid"
+                            >
+                                Evidencias
+                            </button>
+
+                            <button
+                                class="btn-sec"
+                                data-tab="qr"
+                            >
+                                QR
+                            </button>
+
+                            <a
+                                class="btn-sec"
+                                id="mFicha"
+                                href="#"
+                            >
+                                Ver ficha
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                    <!-- EVIDENCIAS -->
+
+                    <div class="panel-tab" id="tab-evid">
+                        <div id="mEvid"></div>
+                    </div>
+
+                    <!-- CÓDIGO QR -->
+
+                    <div class="panel-tab" id="tab-qr">
+
+                        <div class="text-center">
+
+                            <div
+                                class="mb-2"
+                                id="mFolioQR"
+                                style="font-weight:700"
+                            ></div>
+
+                            <div id="contenedorQR"></div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- HISTORIAL -->
+
+                    <div class="panel-tab" id="tab-hist">
+
+                        <p class="sub mb-0">
+                            El historial se conecta con
+                            <code>tb_revisiones</code>
+                            en el siguiente paso.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR -->
+
+    <div
+        class="modal fade"
+        id="modalEliminar"
         tabindex="-1"
         aria-hidden="true"
     >
@@ -500,46 +1014,67 @@ while ($fila = pg_fetch_assoc($resultadoLuces)) {
 
             <div class="modal-content">
 
-                <div class="modal-header">
+                <form action="./luces/eliminar_luz.php" method="POST">
 
-                    <h5 class="modal-title">
-                        <i class="fas fa-qrcode me-2"></i>
-                        Código QR de la luz de emergencia
-                    </h5>
+                    <div class="modal-header align-items-start p-4 pb-0">
 
-                    <button
-                        type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Cerrar"
-                    ></button>
+                        <h5 class="mb-0">
+                            <i
+                                class="fas fa-exclamation-triangle me-2"
+                                style="color:var(--rojo)"
+                            ></i>
+                            Eliminar luz de emergencia
+                        </h5>
 
-                </div>
+                        <button
+                            type="button"
+                            class="cerrar"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"
+                        >
+                            <i class="fas fa-times"></i>
+                        </button>
 
+                    </div>
 
-                <div class="modal-body text-center">
+                    <div class="modal-body p-4">
 
-                    <div id="folioQR" class="folio-qr"></div>
+                        <input
+                            type="hidden"
+                            name="id_luz"
+                            id="elimId"
+                            value="0"
+                        >
 
-                    <div id="contenedorQR"></div>
+                        <p class="mb-1">
+                            ¿Seguro que quieres eliminar
+                            <strong id="elimFolio"></strong>?
+                        </p>
 
-                    <p class="text-muted mt-3 mb-0">
-                        Escanea este código para consultar
-                        la información de la luz de emergencia.
-                    </p>
+                        <small class="sub">
+                            Esta acción no se puede deshacer.
+                        </small>
 
-                </div>
+                    </div>
 
+                    <div class="modal-footer p-4 pt-0">
 
-                <div class="modal-footer">
-                    <button
-                        type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal"
-                    >
-                        Cerrar
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            class="btn-sec"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn-agregar">
+                            <i class="fas fa-trash me-1"></i>
+                            Sí, eliminar
+                        </button>
+
+                    </div>
+
+                </form>
 
             </div>
 
@@ -547,102 +1082,347 @@ while ($fila = pg_fetch_assoc($resultadoLuces)) {
 
     </div>
 
-
-
-    <!-- BOOTSTRAP JS -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js">
-    </script>
-
-
-
-    <!-- =====================================================
-        BUSCADOR, FILTRO Y QR
-        ===================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
 
-        /* BUSCADOR */
-        const buscador = document.getElementById('buscadorLuces');
+        const luces = <?= $jsonLista ?>;
 
-        /* FILTRO DE ESTADO */
-        const filtroEstado = document.getElementById('filtroEstado');
+        const clases = {
+            'Al corriente': 'ok',
+            'Por vencer': 'warn',
+            'Vencido': 'bad',
+            'Sin fecha': 'none'
+        };
 
-        /* FILAS DE LA TABLA */
-        const filasTabla = document.querySelectorAll('#tablaLuces tbody tr');
+        const IP_SERVIDOR = '192.168.1.68';
 
+        /* ==================================================
+           FILTROS
+           ================================================== */
 
-        /* FUNCIÓN PARA FILTRAR TABLA */
-        function filtrarTabla() {
+        const filas = document.querySelectorAll('#lista .fila');
 
-            const textoBusqueda = buscador.value.toLowerCase().trim();
-            const estadoSeleccionado = filtroEstado.value;
+        const buscador = document.getElementById('buscador');
+        const fEstado = document.getElementById('filtroEstado');
+        const fArea = document.getElementById('filtroArea');
 
-            filasTabla.forEach(function (fila) {
+        function filtrar() {
 
-                const texto = fila.textContent.toLowerCase();
-                const estadoFila = fila.dataset.estado || '';
+            const q = buscador.value.toLowerCase().trim();
 
-                const coincideTexto = texto.includes(textoBusqueda);
+            let visibles = 0;
+
+            filas.forEach(f => {
+
+                const coincideTexto =
+                    f.dataset.texto.includes(q);
 
                 const coincideEstado =
-                    estadoSeleccionado === '' ||
-                    estadoFila === estadoSeleccionado;
+                    !fEstado.value ||
+                    f.dataset.estado === fEstado.value;
 
-                fila.style.display =
-                    (coincideTexto && coincideEstado) ? '' : 'none';
+                const coincideArea =
+                    !fArea.value ||
+                    f.dataset.area === fArea.value;
 
+                const mostrar =
+                    coincideTexto &&
+                    coincideEstado &&
+                    coincideArea;
+
+                f.style.display = mostrar ? '' : 'none';
+
+                if (mostrar) {
+                    visibles++;
+                }
+
+            });
+
+            const vacio = document.getElementById('vacio');
+
+            vacio.style.display =
+                visibles === 0 ? '' : 'none';
+
+            if (filas.length > 0) {
+                vacio.textContent =
+                    'Ninguna luz coincide con los filtros.';
+            }
+
+        }
+
+        [buscador, fEstado, fArea].forEach(el => {
+            el.addEventListener('input', filtrar);
+            el.addEventListener('change', filtrar);
+        });
+
+        /* ==================================================
+           MODAL
+           ================================================== */
+
+        const modal = new bootstrap.Modal(
+            document.getElementById('modalLuz')
+        );
+
+        let actual = null;
+
+        function dato(label, valor) {
+
+            const d = document.createElement('div');
+
+            const s = document.createElement('small');
+            s.textContent = label;
+
+            const b = document.createElement('strong');
+            b.textContent = valor || '—';
+
+            d.append(s, b);
+
+            return d;
+        }
+
+        /* ==================================================
+           CAMBIAR PESTAÑAS
+           ================================================== */
+
+        function irATab(nombre) {
+
+            document.querySelectorAll('.pestana').forEach(p => {
+
+                p.classList.toggle(
+                    'activa',
+                    p.dataset.tab === nombre
+                );
+
+            });
+
+            document.querySelectorAll('.panel-tab').forEach(p => {
+
+                p.classList.toggle(
+                    'activo',
+                    p.id === 'tab-' + nombre
+                );
+
+            });
+
+            if (nombre === 'qr') {
+                generarQR();
+            }
+
+        }
+
+        /* ==================================================
+           GENERAR CÓDIGO QR
+           ================================================== */
+
+        function generarQR() {
+
+            const cont = document.getElementById('contenedorQR');
+
+            cont.innerHTML = '';
+
+            document.getElementById('mFolioQR').textContent =
+                'Luz de emergencia: ' + actual.folio;
+
+            const urlFicha =
+                'http://' + IP_SERVIDOR +
+                '/recidencias/activos/areas.php/seguimientoSotano.php/ver_luces.php?id=' +
+                encodeURIComponent(actual.id_luz);
+
+            new QRCode(cont, {
+                text: urlFicha,
+                width: 220,
+                height: 220
             });
 
         }
 
-        buscador.addEventListener('input', filtrarTabla);
-        filtroEstado.addEventListener('change', filtrarTabla);
+        /* ==================================================
+           ABRIR INFORMACIÓN DE LA LUZ
+           ================================================== */
 
+        function abrir(i) {
 
-        /* GENERAR QR DE LA LUZ DE EMERGENCIA */
-        function mostrarQR(idLuz, folio) {
+            actual = luces[i];
 
-            const contenedorQR = document.getElementById("contenedorQR");
+            document.getElementById('mTitulo').textContent =
+                actual.folio + ' · Luz de emergencia ' +
+                (actual.tipo_iluminacion || '');
 
-            /* LIMPIAR QR ANTERIOR */
-            contenedorQR.innerHTML = "";
+            document.getElementById('mSub').textContent =
+                actual.nombre_area +
+                (actual.ubicacion_detalle
+                    ? ' · ' + actual.ubicacion_detalle
+                    : '');
 
-            /* MOSTRAR IDENTIFICADOR */
-            document.getElementById("folioQR").textContent =
-                "Luz de emergencia: " + folio;
+            const badge = document.getElementById('mBadge');
 
-            /* IP DE LA COMPUTADORA CON XAMPP */
-            const ipServidor = "192.168.1.68";
+            badge.textContent = actual.estado;
 
-            /* URL DE LA FICHA DE LA LUZ (ver_luces.php) */
-            const urlLuz =
-                "http://" +
-                ipServidor +
-                "/recidencias/activos/areas.php/seguimientoSotano.php/ver_luces.php?id=" +
-                idLuz;
+            badge.className =
+                'badge-e b-' + clases[actual.estado];
 
-            console.log("URL DEL QR:", urlLuz);
+            /* INFORMACIÓN GENERAL */
 
-            /* GENERAR QR */
-            new QRCode(contenedorQR, {
-                text: urlLuz,
-                width: 250,
-                height: 250
-            });
+            const info = document.getElementById('mInfo');
 
-            /* ABRIR MODAL */
-            const modal = new bootstrap.Modal(
-                document.getElementById("modalQR")
+            info.innerHTML = '';
+
+            info.append(
+
+                dato('Tipo', actual.tipo_iluminacion),
+
+                dato('Área', actual.nombre_area),
+
+                dato('Ubicación', actual.ubicacion_detalle),
+
+                dato('Estado', actual.estado),
+
+                dato('Fecha de instalación', actual.fecha_instalacion),
+
+                dato('Última revisión', actual.fecha_ultima_revision),
+
+                dato('Próxima revisión', actual.fecha_txt),
+
+                dato(
+                    'Marca / Modelo',
+                    [actual.marca, actual.modelo]
+                        .filter(Boolean)
+                        .join(' / ')
+                ),
+
+                dato('Duración de batería', actual.duracion_bateria),
+
+                dato('Estado físico', actual.estado_fisico),
+
+                dato(
+                    'Observaciones',
+                    actual.observaciones
+                ),
+
+                dato(
+                    'Evidencias',
+                    actual.evidencia_foto ? '1 archivo' : 'Sin evidencias'
+                )
+
             );
+
+            /* RUTA PARA VER FICHA */
+
+            document.getElementById('mFicha').href =
+                './ver_luces.php?id=' +
+                encodeURIComponent(actual.id_luz);
+
+            /* EVIDENCIAS */
+
+            const ev = document.getElementById('mEvid');
+
+            ev.innerHTML = '';
+
+            if (actual.evidencia_foto) {
+
+                const img = document.createElement('img');
+
+                img.className = 'foto';
+
+                img.src = actual.evidencia_foto;
+
+                img.alt = 'Evidencia de ' + actual.folio;
+
+                img.onerror = () => {
+
+                    ev.textContent =
+                        'No se pudo cargar la imagen: ' +
+                        actual.evidencia_foto;
+
+                };
+
+                ev.appendChild(img);
+
+            } else {
+
+                ev.innerHTML =
+                    '<p class="sub mb-0">Esta luz todavía no tiene evidencias.</p>';
+
+            }
+
+            irATab('info');
 
             modal.show();
 
         }
 
+        /* ==================================================
+           EVENTOS DE LAS FILAS
+           ================================================== */
+
+        filas.forEach(f => {
+
+            f.addEventListener('click', () => {
+                abrir(Number(f.dataset.i));
+            });
+
+            f.addEventListener('keydown', ev => {
+
+                if (ev.key === 'Enter' || ev.key === ' ') {
+
+                    ev.preventDefault();
+
+                    abrir(Number(f.dataset.i));
+
+                }
+
+            });
+
+        });
+
+        /* ==================================================
+           EVENTOS DE LAS PESTAÑAS
+           ================================================== */
+
+        document.querySelectorAll('[data-tab]').forEach(b => {
+
+            b.addEventListener('click', () => {
+
+                irATab(b.dataset.tab);
+
+            });
+
+        });
+
+        /* ==================================================
+           ELIMINAR LUZ DE EMERGENCIA
+           (el clic en el botón NO debe abrir el detalle)
+           ================================================== */
+
+        const modalEliminar = new bootstrap.Modal(
+            document.getElementById('modalEliminar')
+        );
+
+        document.querySelectorAll('.btn-eliminar').forEach(b => {
+
+            b.addEventListener('click', ev => {
+
+                ev.stopPropagation();
+
+                document.getElementById('elimId').value =
+                    b.dataset.id;
+
+                document.getElementById('elimFolio').textContent =
+                    b.dataset.folio;
+
+                modalEliminar.show();
+
+            });
+
+            /* Evita que Enter/Espacio abran también el detalle de la fila */
+            b.addEventListener('keydown', ev => {
+                ev.stopPropagation();
+            });
+
+        });
+
     </script>
 
-
 </body>
-
 </html>
