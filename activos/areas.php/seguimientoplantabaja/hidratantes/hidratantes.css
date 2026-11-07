@@ -1,0 +1,135 @@
+/* ==========================================================
+   UBICACIÓN: activos/areas.php/seguimientoplantabaja/hidratantes/hidratantes.css
+   ESTILOS DEL FORMULARIO DE ALTA DE HIDRANTES (tema oscuro SIREV)
+   Clases usadas por alta_hidratante.php:
+   .overlay  .popup  .scroll-popup  #close-btn  .form  .form-element
+   ========================================================== */
+
+:root {
+    --bg: #070b14;
+    --panel: #0d1220;
+    --borde: #1c2436;
+    --texto: #e5e7eb;
+    --suave: #9ca3af;
+    --acento: #e11d48;
+    --acento-hover: #be123c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+}
+
+/* ---------- Fondo y ventana ---------- */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.popup {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 28px 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+
+.scroll-popup {
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.scroll-popup::-webkit-scrollbar { width: 8px; }
+.scroll-popup::-webkit-scrollbar-thumb { background: var(--borde); border-radius: 8px; }
+
+/* ---------- Botón cerrar (×) ---------- */
+#close-btn {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--suave);
+    text-decoration: none;
+}
+#close-btn:hover { color: #fff; }
+
+/* ---------- Formulario ---------- */
+.form h2 {
+    margin: 0 0 22px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.form-element { margin-bottom: 16px; }
+
+.form-element label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: .85rem;
+    color: var(--suave);
+}
+
+.form-element input,
+.form-element select,
+.form-element textarea {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg);
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    color: var(--texto);
+    font-size: .95rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.form-element input::placeholder,
+.form-element textarea::placeholder { color: var(--suave); }
+
+.form-element input:focus,
+.form-element select:focus,
+.form-element textarea:focus {
+    border-color: var(--acento);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, .2);
+}
+
+.form-element select option { background: var(--panel); color: var(--texto); }
+
+/* Calendario del input date en modo oscuro */
+.form-element input[type="date"] { color-scheme: dark; }
+
+.form-element textarea { resize: vertical; min-height: 80px; }
+
+/* ---------- Botón guardar ---------- */
+.form-element button {
+    width: 100%;
+    padding: 13px;
+    background: var(--acento);
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+}
+.form-element button:hover { background: var(--acento-hover); }
+
+@media (max-width: 480px) {
+    .popup { padding: 22px 18px; }
+}

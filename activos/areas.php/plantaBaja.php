@@ -226,7 +226,7 @@
                         </div>
                         <h5 class="card-title mt-2 mb-1">Alarmas</h5>
                         <p class="card-text small text-muted mb-1">Gestión de alarmas</p>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoplantabaja/alarmas/alarmas.php" class="btn btn-sm btn-outline-danger rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>

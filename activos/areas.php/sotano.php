@@ -314,7 +314,7 @@ $archivo_pdf = $archivo_pdf ?? '#';
                         </div>
                         <h5 class="card-title mt-2 mb-1">Hidrantes</h5>
                         <p class="card-text small text-muted mb-1">Gestión de hidrantes</p>
-                        <a href="../areas.php/seguimientoSotano.php/Hidrantantes.php" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
+                        <a href="../areas.php/seguimientoSotano.php/Hidratantes.php" class="btn btn-sm btn-outline-info rounded-pill">Ver más</a>
                     </div>
                 </div>
             </div>

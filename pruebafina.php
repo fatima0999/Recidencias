@@ -140,7 +140,7 @@ if ($resultadoTablaActivos) {
 <body>
 
     <!-- ========== NAVBAR SUPERIOR ========== -->
-    <nav class="navbar navbar-light bg-light shadow-sm fixed-top">
+    <nav class="navbar navbar-light bg-light shadow-sm fixed-top ">
         <div class="container-fluid">
 
             <!-- MENÚ IZQUIERDO -->
@@ -211,7 +211,7 @@ if ($resultadoTablaActivos) {
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="croquisSotano/principios-basicos/01-js-map/index.html">
                         <i class="fas fa-map me-2"></i>Planos
                     </a>
                 </li>

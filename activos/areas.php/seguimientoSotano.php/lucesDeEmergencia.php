@@ -24,6 +24,37 @@ function e($valor) {
 
 
 /* ==========================================================
+   IP DE ESTA PC EN LA RED (para que el celular abra el QR)
+   Si la detección falla, escribe tu IP a mano en $IP_MANUAL
+   (la ves con "ipconfig", adaptador Wi-Fi, "Dirección IPv4")
+   ========================================================== */
+
+$IP_MANUAL = '';   // Ej. '192.168.1.68'
+
+function detectarIpLocal() {
+
+    /* Truco UDP: no envía nada, solo pregunta con qué IP saldría a la red */
+    $s = @stream_socket_client('udp://8.8.8.8:53', $errno, $errstr, 1);
+
+    if ($s) {
+        $nombre = stream_socket_get_name($s, false);
+        fclose($s);
+
+        if ($nombre) {
+            $ip = explode(':', $nombre)[0];
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return $ip;
+            }
+        }
+    }
+
+    return gethostbyname(gethostname());
+}
+
+$ipServidor = $IP_MANUAL !== '' ? $IP_MANUAL : detectarIpLocal();
+
+
+/* ==========================================================
    AVISO DESPUÉS DE GUARDAR / ELIMINAR (parámetro ?msg=)
    ========================================================== */
 
@@ -55,7 +86,6 @@ $sql = "
         l.fecha_instalacion,
         l.fecha_ultima_revision,
         l.fecha_proxima_revision,
-        l.evidencia_foto,
         l.observaciones,
         l.ubicacion_detalle,
         a.nombre_area
@@ -151,14 +181,37 @@ $clases = [
     'Sin fecha' => 'none'
 ];
 
-$jsonLista = json_encode(
-    $lista,
+$flagsJson =
     JSON_HEX_TAG |
     JSON_HEX_AMP |
     JSON_HEX_APOS |
     JSON_HEX_QUOT |
-    JSON_UNESCAPED_UNICODE
-);
+    JSON_UNESCAPED_UNICODE;
+
+$jsonLista = json_encode($lista, $flagsJson);
+
+
+/* ==========================================================
+   HISTORIAL DE REVISIONES (tb_revisiones)
+   Se agrupa por id de luz: $historial[id_luz] = [revisiones...]
+   ========================================================== */
+
+$historial = [];
+
+$rh = pg_query($conexion, "
+    SELECT id_activo, fecha_revision, tipo_revision, resultado, observaciones
+    FROM public.tb_revisiones
+    WHERE tipo_activo = 'luz_emergencia'
+    ORDER BY fecha_revision DESC, id_revision DESC
+");
+
+if ($rh) {
+    while ($h = pg_fetch_assoc($rh)) {
+        $historial[$h['id_activo']][] = $h;
+    }
+}
+
+$jsonHistorial = json_encode($historial, $flagsJson);
 
 ?>
 
@@ -579,10 +632,25 @@ $jsonLista = json_encode(
             display: block;
         }
 
-        .foto {
-            max-width: 100%;
-            border-radius: 12px;
-            border: 1px solid var(--borde);
+        /* HISTORIAL */
+
+        .rev {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--borde);
+        }
+
+        .rev:last-child {
+            border-bottom: 0;
+        }
+
+        .rev .fecha {
+            font-weight: 700;
+        }
+
+        .rev .obs {
+            color: var(--suave);
+            font-size: .9rem;
+            margin-top: 2px;
         }
 
         @media (max-width: 992px) {
@@ -906,11 +974,6 @@ $jsonLista = json_encode(
                             Info
                         </button>
 
-                        <button class="pestana" data-tab="evid">
-                            <i class="fas fa-camera me-1"></i>
-                            Evidencias
-                        </button>
-
                         <button class="pestana" data-tab="qr">
                             <i class="fas fa-qrcode me-1"></i>
                             QR
@@ -932,13 +995,6 @@ $jsonLista = json_encode(
                         <div class="acciones">
 
                             <button
-                                class="btn-agregar"
-                                data-tab="evid"
-                            >
-                                Evidencias
-                            </button>
-
-                            <button
                                 class="btn-sec"
                                 data-tab="qr"
                             >
@@ -946,21 +1002,15 @@ $jsonLista = json_encode(
                             </button>
 
                             <a
-                                class="btn-sec"
-                                id="mFicha"
+                                class="btn-agregar"
+                                id="mActualizar"
                                 href="#"
                             >
-                                Ver ficha
+                                Actualizar
                             </a>
 
                         </div>
 
-                    </div>
-
-                    <!-- EVIDENCIAS -->
-
-                    <div class="panel-tab" id="tab-evid">
-                        <div id="mEvid"></div>
                     </div>
 
                     <!-- CÓDIGO QR -->
@@ -977,6 +1027,18 @@ $jsonLista = json_encode(
 
                             <div id="contenedorQR"></div>
 
+                            <small class="sub d-block">
+                                Escanéalo con el celular (conectado al mismo wifi)
+                            </small>
+
+                            <a
+                                id="mUrlQR"
+                                href="#"
+                                target="_blank"
+                                class="d-block small mt-2"
+                                style="word-break:break-all; color:var(--suave)"
+                            ></a>
+
                         </div>
 
                     </div>
@@ -984,13 +1046,7 @@ $jsonLista = json_encode(
                     <!-- HISTORIAL -->
 
                     <div class="panel-tab" id="tab-hist">
-
-                        <p class="sub mb-0">
-                            El historial se conecta con
-                            <code>tb_revisiones</code>
-                            en el siguiente paso.
-                        </p>
-
+                        <div id="mHist"></div>
                     </div>
 
                 </div>
@@ -1052,6 +1108,7 @@ $jsonLista = json_encode(
                         </p>
 
                         <small class="sub">
+                            Se eliminará también su historial de revisiones.
                             Esta acción no se puede deshacer.
                         </small>
 
@@ -1087,6 +1144,7 @@ $jsonLista = json_encode(
     <script>
 
         const luces = <?= $jsonLista ?>;
+        const historial = <?= $jsonHistorial ?>;
 
         const clases = {
             'Al corriente': 'ok',
@@ -1095,7 +1153,9 @@ $jsonLista = json_encode(
             'Sin fecha': 'none'
         };
 
-        const IP_SERVIDOR = '192.168.1.68';
+        /* IP de esta PC en la red (detectada por PHP).
+           Se usa solo si abres el sistema por localhost. */
+        const IP_SERVIDOR = <?= json_encode($ipServidor) ?>;
 
         /* ==================================================
            FILTROS
@@ -1213,6 +1273,7 @@ $jsonLista = json_encode(
 
         /* ==================================================
            GENERAR CÓDIGO QR
+           (abre la ficha pública con su historial)
            ================================================== */
 
         function generarQR() {
@@ -1224,15 +1285,89 @@ $jsonLista = json_encode(
             document.getElementById('mFolioQR').textContent =
                 'Luz de emergencia: ' + actual.folio;
 
+            /* Si abres el sistema por localhost usa la IP de la red;
+               si ya lo abriste por IP, usa esa misma */
+            const host = (
+                location.hostname === 'localhost' ||
+                location.hostname === '127.0.0.1'
+            )
+                ? IP_SERVIDOR
+                : location.host;
+
             const urlFicha =
-                'http://' + IP_SERVIDOR +
-                '/recidencias/activos/areas.php/seguimientoSotano.php/ver_luces.php?id=' +
+                location.protocol + '//' + host +
+                '/recidencias/activos/areas.php/seguimientoSotano.php/luces/ficha_luz.php?id=' +
                 encodeURIComponent(actual.id_luz);
+
+            if (typeof QRCode === 'undefined') {
+                cont.textContent =
+                    'No cargó la librería del QR (revisa tu conexión a internet).';
+                return;
+            }
 
             new QRCode(cont, {
                 text: urlFicha,
-                width: 220,
-                height: 220
+                width: 260,
+                height: 260,
+                correctLevel: QRCode.CorrectLevel.L
+            });
+
+            /* Link escrito debajo del QR para probarlo a mano */
+            const enlace = document.getElementById('mUrlQR');
+
+            enlace.href = urlFicha;
+            enlace.textContent = urlFicha;
+
+        }
+
+        /* ==================================================
+           HISTORIAL DE REVISIONES
+           ================================================== */
+
+        function pintarHistorial(idLuz) {
+
+            const cont = document.getElementById('mHist');
+
+            cont.innerHTML = '';
+
+            const revs = historial[idLuz] || [];
+
+            if (revs.length === 0) {
+
+                const p = document.createElement('p');
+                p.className = 'sub mb-0';
+                p.textContent = 'Sin revisiones registradas.';
+                cont.appendChild(p);
+
+                return;
+            }
+
+            revs.forEach(r => {
+
+                const d = document.createElement('div');
+                d.className = 'rev';
+
+                const f = document.createElement('span');
+                f.className = 'fecha';
+                f.textContent = r.fecha_revision;
+
+                d.append(
+                    f,
+                    ' · ' + (r.tipo_revision || '—') +
+                    ' · ' + (r.resultado || '—')
+                );
+
+                if (r.observaciones) {
+
+                    const o = document.createElement('div');
+                    o.className = 'obs';
+                    o.textContent = r.observaciones;
+
+                    d.appendChild(o);
+                }
+
+                cont.appendChild(d);
+
             });
 
         }
@@ -1295,56 +1430,19 @@ $jsonLista = json_encode(
 
                 dato('Estado físico', actual.estado_fisico),
 
-                dato(
-                    'Observaciones',
-                    actual.observaciones
-                ),
-
-                dato(
-                    'Evidencias',
-                    actual.evidencia_foto ? '1 archivo' : 'Sin evidencias'
-                )
+                dato('Observaciones', actual.observaciones)
 
             );
 
-            /* RUTA PARA VER FICHA */
+            /* BOTÓN ACTUALIZAR */
 
-            document.getElementById('mFicha').href =
-                './ver_luces.php?id=' +
+            document.getElementById('mActualizar').href =
+                './luces/actualizar_luz.php?id=' +
                 encodeURIComponent(actual.id_luz);
 
-            /* EVIDENCIAS */
+            /* HISTORIAL */
 
-            const ev = document.getElementById('mEvid');
-
-            ev.innerHTML = '';
-
-            if (actual.evidencia_foto) {
-
-                const img = document.createElement('img');
-
-                img.className = 'foto';
-
-                img.src = actual.evidencia_foto;
-
-                img.alt = 'Evidencia de ' + actual.folio;
-
-                img.onerror = () => {
-
-                    ev.textContent =
-                        'No se pudo cargar la imagen: ' +
-                        actual.evidencia_foto;
-
-                };
-
-                ev.appendChild(img);
-
-            } else {
-
-                ev.innerHTML =
-                    '<p class="sub mb-0">Esta luz todavía no tiene evidencias.</p>';
-
-            }
+            pintarHistorial(actual.id_luz);
 
             irATab('info');
 

@@ -1,0 +1,26 @@
+{
+  "name": "recidencias",
+  "version": "1.0.0",
+  "description": "Sistema Inteligente de Prevención y Verificación (SIPV)",
+  "keywords": [
+    "SIPV",
+    "PHP",
+    "PostgreSQL",
+    "Audi"
+  ],
+  "homepage": "https://github.com/fatima0999/Recidencias#readme",
+  "bugs": {
+    "url": "https://github.com/fatima0999/Recidencias/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fatima0999/Recidencias.git"
+  },
+  "license": "ISC",
+  "author": "Fatima Alcantara",
+  "type": "commonjs",
+  "main": "graficos.js",
+  "scripts": {
+    "test": "yes"
+  }
+}

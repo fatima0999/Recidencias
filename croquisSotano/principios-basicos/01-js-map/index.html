@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa SIPV - Croquis</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+<style>
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+    #map { position: absolute; inset: 0; background: #f2f2f2; }
+    body { overflow: hidden; font-family: Arial, sans-serif; }
+
+    #instrucciones {
+        position: absolute; top: 10px; left: 50px; z-index: 1000;
+        background: white; padding: 12px; border-radius: 8px;
+        box-shadow: 0 1px 6px #777; font-size: 13px; max-width: 270px;
+    }
+    #instrucciones select {
+        width: 100%; padding: 6px; margin-top: 6px;
+        border: 1px solid #ccc; border-radius: 5px;
+    }
+
+    #tituloCroquis {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        z-index: 1000; background: white; padding: 8px 24px;
+        border-radius: 20px; box-shadow: 0 1px 6px #777;
+        font-size: 20px; font-weight: bold; letter-spacing: 2px;
+        text-align: center;
+    }
+    #tituloCroquis small { display: block; font-size: 11px; font-weight: normal; letter-spacing: 0; color: #666; }
+
+    .flecha {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        z-index: 1000; border: none; cursor: pointer;
+        background: white; color: #333; box-shadow: 0 1px 6px #777;
+        width: 56px; height: 56px; border-radius: 50%;
+        font-size: 26px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s, color 0.15s;
+    }
+    .flecha:hover { background: #0d6efd; color: white; }
+    .flecha small { position: absolute; top: 60px; font-size: 11px; color: #333; font-weight: bold; white-space: nowrap; }
+    #btnAnterior { left: 12px; }
+    #btnSiguiente { right: 12px; }
+
+    .puntero-activo {
+        box-sizing: border-box; width: 14px; height: 14px;
+        border: 2px solid white; border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.45); transition: box-shadow 0.15s;
+    }
+    .puntero-activo:hover { box-shadow: 0 0 0 4px rgba(0,0,0,0.25); }
+
+    .color-extintor { background: #dc3545; }
+    .color-ruta { background: #198754; }
+    .color-botiquin { background: #0d6efd; }
+    .color-detector { background: #ffc107; }
+    .color-alarma { background: #6f42c1; }
+    .color-luz { background: #0dcaf0; }
+    .color-hidrante { background: #fd7e14; }
+
+    .popup-extintor { font-family: Arial, sans-serif; min-width: 180px; }
+    .popup-extintor h4 { margin: 0 0 8px; color: #c62828; }
+    .popup-extintor p { margin: 5px 0; font-size: 12px; }
+
+    #panelEdicion {
+        display: none; position: absolute; top: 10px; right: 10px; z-index: 1001;
+        background: white; padding: 15px; width: 250px;
+        border-radius: 8px; box-shadow: 0 1px 6px #777;
+    }
+    #panelEdicion input, #panelEdicion textarea {
+        width: 100%; padding: 7px; margin: 5px 0 10px;
+        box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;
+    }
+    .boton { padding: 7px 10px; border: none; border-radius: 5px; cursor: pointer; color: white; margin-top: 4px; }
+    .btn-eliminar { background: #dc3545; }
+    .btn-cerrar { background: #6c757d; }
+
+    #leyenda {
+        position: absolute; bottom: 15px; left: 10px; z-index: 1000;
+        background: white; padding: 10px; border-radius: 7px;
+        box-shadow: 0 1px 5px #777; font-size: 11px;
+    }
+    .elemento-leyenda { display: flex; align-items: center; gap: 7px; margin: 5px 0; }
+    .color-leyenda { width: 10px; height: 10px; border-radius: 50%; }
+
+    #errorGlobal {
+        display: none; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); z-index: 2000;
+        background: #fff3cd; border: 1px solid #ffc107; color: #664d03;
+        padding: 20px; border-radius: 8px; max-width: 420px; font-size: 14px;
+    }
+</style>
+</head>
+<body>
+
+<div id="instrucciones">
+    <button class="boton btn-cerrar" id="btnVolver">← Volver</button><br><br>
+    <strong>Mapa SIPV - Extintores y Activos</strong><br><br>
+    Selecciona un activo y después haz clic en el croquis para colocar su puntero.<br><br>
+    <label for="tipoActivo"><strong>Activo registrado:</strong></label>
+    <select id="tipoActivo"><option value="">Cargando activos...</option></select>
+    <br><br>
+    <small id="mensajeEstado">Cargando croquis...</small>
+</div>
+
+<div id="tituloCroquis">CARGANDO...</div>
+
+<button class="flecha" id="btnAnterior" title="Croquis anterior">❮<small id="txtAnterior">Volver</small></button>
+<button class="flecha" id="btnSiguiente" title="Siguiente croquis">❯<small id="txtSiguiente">Siguiente</small></button>
+
+<div id="panelEdicion">
+    <h3>Información del activo</h3>
+    <label>Folio:</label>
+    <input type="text" id="editarFolio" readonly>
+    <label>Nombre del activo:</label>
+    <input type="text" id="editarNombre" readonly>
+    <label>Observaciones:</label>
+    <textarea id="editarObservaciones" rows="3" readonly></textarea>
+    <label>Tipo de activo:</label>
+    <input type="text" id="editarTipo" readonly>
+    <button class="boton btn-eliminar" id="btnEliminar">Eliminar puntero</button>
+    <button class="boton btn-cerrar" id="btnCerrar">Cerrar</button>
+</div>
+
+<div id="leyenda">
+    <strong>LEYENDA DE ACTIVOS</strong>
+    <div class="elemento-leyenda"><div class="color-leyenda color-extintor"></div>Extintores</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-ruta"></div>Rutas de emergencia</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-botiquin"></div>Botiquines</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-detector"></div>Detectores</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-alarma"></div>Alarmas</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-luz"></div>Luces de emergencia</div>
+    <div class="elemento-leyenda"><div class="color-leyenda color-hidrante"></div>Hidrantes</div>
+</div>
+
+<div id="errorGlobal"></div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+/* ========= CONFIGURACIÓN ========= */
+// Para agregar un croquis nuevo, solo añade una línea aquí.
+// "clave": sin espacios ni acentos (se guarda en la base de datos, no la cambies después).
+const croquis = [
+    { clave: "sotano",      nombre: "SÓTANO",        imagen: "../imagenes/uno.jpeg"   },
+    { clave: "planta_baja", nombre: "PLANTA BAJA",   imagen: "../imagenes/dos.jpeg"   },
+    { clave: "nivel_1",     nombre: "PRIMER NIVEL",  imagen: "../imagenes/tres.jpeg"  },
+    { clave: "nivel_2",     nombre: "SEGUNDO NIVEL", imagen: "../imagenes/cuatro.jpeg" },
+    { clave: "nivel_3",     nombre: "TERCER NIVEL",  imagen: "../imagenes/cienco.jpeg" },
+    { clave: "azotea",      nombre: "AZOTEA",        imagen: "../imagenes/seis.jpeg"  }
+];
+
+const URL_OBTENER = "obtener_activos.php";
+const URL_GUARDAR = "guardar_ubicacion.php";
+const URL_ELIMINAR = "eliminar_ubicacion.php";
+const URL_VOLVER = "";   // ejemplo: "../index.php". Vacío = regresa a la página anterior
+
+const tiposActivos = {
+    extintor: { nombre: "Extintor", clase: "color-extintor", color: "#dc3545" },
+    ruta: { nombre: "Ruta de emergencia", clase: "color-ruta", color: "#198754" },
+    botiquin: { nombre: "Botiquín", clase: "color-botiquin", color: "#0d6efd" },
+    detector: { nombre: "Detector de humo", clase: "color-detector", color: "#ffc107" },
+    alarma: { nombre: "Alarma", clase: "color-alarma", color: "#6f42c1" },
+    luz: { nombre: "Luz de emergencia", clase: "color-luz", color: "#0dcaf0" },
+    hidrante: { nombre: "Hidrante", clase: "color-hidrante", color: "#fd7e14" }
+};
+
+let mapa = null;
+let capaImagen = null;
+let limitesCroquis = null;
+let indiceActual = 0;
+let tokenCambio = 0;
+let marcadores = new Map();
+let marcadorSeleccionado = null;
+let activos = [];
+let activoElegido = null;
+
+const estado = (t) => { document.getElementById("mensajeEstado").textContent = t; };
+const claveActual = () => croquis[indiceActual].clave;
+
+function nombreCroquis(clave) {
+    const c = croquis.find(c => c.clave === clave);
+    return c ? c.nombre : clave;
+}
+
+function mostrarError(texto) {
+    const e = document.getElementById("errorGlobal");
+    e.innerHTML = texto;
+    e.style.display = "block";
+}
+
+function obtenerClaveTipo(tabla) {
+    const eq = {
+        extintores: "extintor", botiquines: "botiquin", luces_emergencia: "luz",
+        hidrantes: "hidrante", detectores_humo: "detector",
+        alarmas_emergencia: "alarma", rutas_evacuacion: "ruta"
+    };
+    return eq[tabla] || "extintor";
+}
+
+function obtenerClave(a) { return a.tabla_origen + "_" + a.id_activo_origen; }
+
+function escaparHTML(texto) {
+    const eq = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+    return String(texto ?? "").replace(/[&<>"']/g, c => eq[c]);
+}
+
+async function leerJSON(respuesta) {
+    const texto = await respuesta.text();
+    let resultado;
+    try { resultado = JSON.parse(texto); }
+    catch (e) {
+        console.error("Respuesta del servidor:", texto);
+        throw new Error("El servidor no devolvió JSON válido. Revisa el archivo PHP.");
+    }
+    if (!respuesta.ok) throw new Error(resultado.error || "Error en la solicitud al servidor.");
+    return resultado;
+}
+
+function crearIcono(tipo) {
+    const c = tiposActivos[tipo] || tiposActivos.extintor;
+    return L.divIcon({
+        className: "",
+        html: `<div class="puntero-activo ${c.clase}"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+    });
+}
+
+function actualizarInformacion(marcador) {
+    const p = marcador.getLatLng();
+    const d = marcador.datos;
+    const contenido = `
+        <div class="popup-extintor">
+            <h4>${escaparHTML(d.nombre)}</h4>
+            <p><strong>Folio:</strong> ${escaparHTML(d.folio || "Sin folio")}</p>
+            <p><strong>Tipo:</strong> ${escaparHTML(d.tipo)}</p>
+            <p><strong>Ubicación:</strong> ${escaparHTML(d.ubicacion)}</p>
+            <p><strong>X:</strong> ${p.lng.toFixed(2)} &nbsp; <strong>Y:</strong> ${p.lat.toFixed(2)}</p>
+            <p><strong>Observaciones:</strong> ${escaparHTML(d.observaciones)}</p>
+        </div>`;
+    if (marcador.getTooltip()) marcador.setTooltipContent(contenido);
+    else marcador.bindTooltip(contenido);
+}
+
+async function guardarUbicacion(marcador) {
+    const d = marcador.datos;
+    const p = marcador.getLatLng();
+    const cfg = tiposActivos[d.claveTipo];
+    if (!cfg) { alert("No se reconoce el tipo de activo."); return false; }
+
+    const info = {
+        tabla_origen: d.tabla_origen,
+        id_activo_origen: d.id_activo_origen,
+        tipo_activo: d.tipo,
+        numero_folio: d.folio,
+        nombre_activo: d.nombre,
+        ubicacion: d.ubicacion,
+        observaciones: d.observaciones,
+        coordenada_x: p.lat,
+        coordenada_y: p.lng,
+        color: cfg.color,
+        croquis: claveActual()
+    };
+
+    try {
+        const r = await fetch(URL_GUARDAR, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(info)
+        });
+        const resultado = await leerJSON(r);
+        if (!resultado.success) {
+            throw new Error(resultado.error || resultado.mensaje || "No se pudo guardar.");
+        }
+        if (resultado.id_ubicacion !== undefined) d.id_ubicacion = resultado.id_ubicacion;
+        actualizarInformacion(marcador);
+        estado("Ubicación guardada correctamente.");
+        return true;
+    } catch (error) {
+        console.error("Error al guardar:", error);
+        alert("No se pudo guardar la ubicación: " + error.message);
+        return false;
+    }
+}
+
+function colocarMarcador(activo, coordenadas) {
+    const clave = obtenerClave(activo);
+    let marcador = marcadores.get(clave);
+    const tipo = obtenerClaveTipo(activo.tabla_origen);
+    const cfg = tiposActivos[tipo] || tiposActivos.extintor;
+
+    const datos = {
+        tabla_origen: activo.tabla_origen,
+        id_activo_origen: activo.id_activo_origen,
+        folio: activo.numero_folio || "",
+        nombre: activo.nombre_activo || "",
+        tipo: activo.tipo_activo || cfg.nombre,
+        claveTipo: tipo,
+        ubicacion: activo.ubicacion || "",
+        observaciones: activo.observaciones || "",
+        id_ubicacion: activo.id_ubicacion || null
+    };
+
+    if (marcador) {
+        marcador.setLatLng(coordenadas);
+        marcador.datos = datos;
+    } else {
+        marcador = L.marker(coordenadas, { icon: crearIcono(tipo), draggable: false }).addTo(mapa);
+        marcador.datos = datos;
+        marcadores.set(clave, marcador);
+        marcador.on("click", function (e) {
+            L.DomEvent.stopPropagation(e);
+            abrirEdicion(marcador);
+        });
+    }
+    actualizarInformacion(marcador);
+    return marcador;
+}
+
+function abrirEdicion(marcador) {
+    marcadorSeleccionado = marcador;
+    document.getElementById("editarFolio").value = marcador.datos.folio;
+    document.getElementById("editarNombre").value = marcador.datos.nombre;
+    document.getElementById("editarObservaciones").value = marcador.datos.observaciones;
+    document.getElementById("editarTipo").value = marcador.datos.tipo;
+    document.getElementById("panelEdicion").style.display = "block";
+}
+
+function cerrarPanel() {
+    document.getElementById("panelEdicion").style.display = "none";
+    marcadorSeleccionado = null;
+}
+
+function cargarListaActivos() {
+    const select = document.getElementById("tipoActivo");
+    select.innerHTML = `<option value="">Selecciona un activo</option>`;
+
+    const grupoAqui = document.createElement("optgroup");
+    grupoAqui.label = "Colocados en " + croquis[indiceActual].nombre;
+    const grupoLibres = document.createElement("optgroup");
+    grupoLibres.label = "Sin colocar";
+
+    activos.forEach(function (a) {
+        // Los activos colocados en otros croquis no se muestran aquí
+        if (a.croquis && a.croquis !== claveActual()) return;
+
+        const op = document.createElement("option");
+        op.value = obtenerClave(a);
+        const folio = a.numero_folio ? " - Folio: " + a.numero_folio : "";
+        op.textContent = (a.tipo_activo || "Activo") + folio + " - " +
+            (a.nombre_activo || "Sin nombre") + " (" + (a.ubicacion || "Sin ubicación") + ")" +
+            (a.croquis ? " ✔" : "");
+        (a.croquis ? grupoAqui : grupoLibres).appendChild(op);
+    });
+
+    if (grupoAqui.children.length) select.appendChild(grupoAqui);
+    if (grupoLibres.children.length) select.appendChild(grupoLibres);
+}
+
+/* ========= CARGAR ACTIVOS (solo consulta) ========= */
+async function cargarActivos() {
+    const resultado = await leerJSON(await fetch(URL_OBTENER));
+    if (!Array.isArray(resultado)) {
+        throw new Error(resultado.error || "El resultado no contiene una lista de activos.");
+    }
+    activos = resultado;
+    cargarListaActivos();
+}
+
+/* ========= DIBUJAR SOLO LOS PUNTEROS DEL CROQUIS ACTUAL ========= */
+function dibujarMarcadores() {
+    marcadores.forEach(m => mapa.removeLayer(m));
+    marcadores.clear();
+
+    activos.forEach(function (a) {
+        if (a.croquis !== claveActual()) return;
+        if (a.coordenada_x === null || a.coordenada_x === undefined || a.coordenada_x === "") return;
+        if (a.coordenada_y === null || a.coordenada_y === undefined || a.coordenada_y === "") return;
+        const x = Number(a.coordenada_x), y = Number(a.coordenada_y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const c = L.latLng(x, y);
+        if (!limitesCroquis.contains(c)) return;
+        colocarMarcador(a, c);
+    });
+
+    estado(marcadores.size + " punteros en " + croquis[indiceActual].nombre + ".");
+}
+
+/* ========= CAMBIAR DE CROQUIS ========= */
+function cargarImagen(url) {
+    return new Promise(function (resolve, reject) {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = () => reject(new Error("No se pudo cargar la imagen: " + url));
+        im.src = url;
+    });
+}
+
+function actualizarNavegacion() {
+    const total = croquis.length;
+    document.getElementById("tituloCroquis").innerHTML =
+        escaparHTML(croquis[indiceActual].nombre) +
+        "<small>Croquis " + (indiceActual + 1) + " de " + total + "</small>";
+
+    const btnA = document.getElementById("btnAnterior");
+    const btnS = document.getElementById("btnSiguiente");
+    btnA.style.display = indiceActual > 0 ? "flex" : "none";
+    btnS.style.display = indiceActual < total - 1 ? "flex" : "none";
+    if (indiceActual > 0) document.getElementById("txtAnterior").textContent = croquis[indiceActual - 1].nombre;
+    if (indiceActual < total - 1) document.getElementById("txtSiguiente").textContent = croquis[indiceActual + 1].nombre;
+}
+
+async function cambiarCroquis(indice) {
+    const miToken = ++tokenCambio;
+    document.getElementById("errorGlobal").style.display = "none";
+    cerrarPanel();
+    activoElegido = null;
+
+    try {
+        const im = await cargarImagen(croquis[indice].imagen);
+        if (miToken !== tokenCambio) return;
+
+        indiceActual = indice;
+        limitesCroquis = L.latLngBounds([[0, 0], [im.naturalHeight, im.naturalWidth]]);
+
+        if (!mapa) {
+            mapa = L.map("map", {
+                crs: L.CRS.Simple, minZoom: -10, maxZoom: 3, zoomSnap: 0,
+                zoomControl: false, dragging: false, touchZoom: false,
+                doubleClickZoom: false, scrollWheelZoom: false,
+                boxZoom: false, keyboard: false
+            });
+            configurarClickMapa();
+            window.addEventListener("resize", function () {
+                mapa.invalidateSize();
+                mapa.fitBounds(limitesCroquis, { padding: [12, 12], animate: false });
+            });
+        }
+
+        if (capaImagen) mapa.removeLayer(capaImagen);
+        capaImagen = L.imageOverlay(croquis[indice].imagen, limitesCroquis).addTo(mapa);
+        mapa.fitBounds(limitesCroquis, { padding: [12, 12], animate: false });
+
+        actualizarNavegacion();
+        dibujarMarcadores();
+        cargarListaActivos();
+    } catch (error) {
+        console.error(error);
+        estado("No se pudo cargar el croquis.");
+        mostrarError("<strong>No se pudo cargar el croquis.</strong><br>" + escaparHTML(error.message));
+    }
+}
+
+document.getElementById("btnAnterior").addEventListener("click", function () {
+    if (indiceActual > 0) cambiarCroquis(indiceActual - 1);
+});
+document.getElementById("btnSiguiente").addEventListener("click", function () {
+    if (indiceActual < croquis.length - 1) cambiarCroquis(indiceActual + 1);
+});
+
+/* ========= SELECCIONAR ACTIVO ========= */
+document.getElementById("tipoActivo").addEventListener("change", async function () {
+    const clave = this.value;
+    activoElegido = activos.find(a => obtenerClave(a) === clave) || null;
+    if (!activoElegido) return;
+
+    if (activoElegido.croquis) {
+        const idx = croquis.findIndex(c => c.clave === activoElegido.croquis);
+        if (idx >= 0 && idx !== indiceActual) await cambiarCroquis(idx);
+        const marcador = marcadores.get(clave);
+        if (marcador) marcador.openTooltip();
+        estado("Activo ya registrado en " + nombreCroquis(activoElegido.croquis) + ".");
+    } else {
+        estado("Haz clic dentro del croquis " + croquis[indiceActual].nombre + " para colocarlo.");
+    }
+});
+
+/* ========= CLIC EN EL MAPA ========= */
+function configurarClickMapa() {
+    mapa.on("click", async function (evento) {
+        if (!activoElegido) { estado("Primero selecciona un activo en el menú desplegable."); return; }
+        if (!limitesCroquis.contains(evento.latlng)) { estado("No puedes colocar puntos fuera del croquis."); return; }
+
+        const clave = obtenerClave(activoElegido);
+        if (activoElegido.croquis || marcadores.has(clave)) {
+            estado("Este activo ya tiene un puntero colocado."); return;
+        }
+
+        const activoActual = activoElegido;
+        const marcador = colocarMarcador(activoActual, evento.latlng);
+        const guardado = await guardarUbicacion(marcador);
+
+        if (guardado) {
+            activoActual.coordenada_x = evento.latlng.lat;
+            activoActual.coordenada_y = evento.latlng.lng;
+            activoActual.croquis = claveActual();
+            cargarListaActivos();
+            document.getElementById("tipoActivo").value = "";
+            activoElegido = null;
+        } else {
+            mapa.removeLayer(marcador);
+            marcadores.delete(clave);
+        }
+    });
+}
+
+/* ========= ELIMINAR PUNTERO ========= */
+document.getElementById("btnEliminar").addEventListener("click", async function () {
+    if (!marcadorSeleccionado) return;
+    if (!confirm("¿Deseas eliminar este puntero del croquis? El activo original no será eliminado.")) return;
+
+    const d = marcadorSeleccionado.datos;
+    try {
+        const r = await fetch(URL_ELIMINAR, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tabla_origen: d.tabla_origen, id_activo_origen: d.id_activo_origen })
+        });
+        const resultado = await leerJSON(r);
+        if (!resultado.success) throw new Error(resultado.error || "No se pudo eliminar la ubicación.");
+
+        mapa.removeLayer(marcadorSeleccionado);
+        marcadores.delete(obtenerClave(d));
+
+        const act = activos.find(a => obtenerClave(a) === obtenerClave(d));
+        if (act) { act.coordenada_x = null; act.coordenada_y = null; act.croquis = null; }
+        cargarListaActivos();
+
+        cerrarPanel();
+        estado("Ubicación eliminada del croquis.");
+    } catch (error) {
+        console.error("Error al eliminar:", error);
+        alert("Error al eliminar: " + error.message);
+    }
+});
+
+document.getElementById("btnCerrar").addEventListener("click", cerrarPanel);
+
+document.getElementById("btnVolver").addEventListener("click", function () {
+    if (URL_VOLVER) window.location.href = URL_VOLVER;
+    else window.history.back();
+});
+
+/* ========= INICIO ========= */
+(async function iniciar() {
+    try {
+        await cargarActivos();
+    } catch (error) {
+        console.error("Error al consultar activos:", error);
+        estado("Error al conectar con la base de datos.");
+        mostrarError("<strong>No se pudieron cargar los activos.</strong><br>" + escaparHTML(error.message));
+    }
+    await cambiarCroquis(0);
+})();
+</script>
+</body>
+</html>
